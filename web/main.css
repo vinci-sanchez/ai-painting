@@ -1,0 +1,11 @@
+.comic-panel {
+  border: 2px solid #000;
+  margin: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.comic-panel img {
+  width: 100%;
+  height: auto;
+}

@@ -8,27 +8,19 @@
     <!-- Bootstrap CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <style>
-        .comic-panel {
-            border: 2px solid #000;
-            margin: 10px;
-            padding: 10px;
-            background: #fff;
-        }
-
-        .comic-panel img {
-            width: 100%;
-            height: auto;
-        }
-    </style>
+    <link rel="stylesheet" href="./main.css">
 </head>
 
 <body>
+    <script type="module" src="./main.js"></script>
+    <script type="module" src="./src/client.js"></script>
     <div class="container my-5">
         <!-- 文本输入框 -->
         <div class="mb-4">
             <label for="textInput" class="form-label">请输入文本（将转换为漫画故事）</label>
             <input type="text" class="form-control" id="textInput" placeholder="例如：一个小猫在森林冒险">
+            <label for="promptInput">提示词（可选）</label>
+            <input type="text" class="form-control" id="promptInput" placeholder="回车键入单个提示词">
             <button class="btn btn-primary mt-2" onclick="generateComic()">提交</button>
         </div>
         <!-- 漫画展示框 -->
@@ -38,67 +30,7 @@
         </div>
     </div>
 
-    <script>
-        // 配置：替换为您的 API Key 和 Endpoint ID
-        const API_KEY = '0fc6a92c-e1b0-4168-a66e-27134d1e8ef3';
-        const BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
-        const TEXT_MODEL = 'ep-20251021151025-8q7tt';  // 如 ep-20241114133215-75z5q (Doubao-Pro)
-        const IMAGE_MODEL = 'ep-20251021153509-xh86n';  // 如 Doubao-Image 的 Endpoint
 
-        async function generateComic() {
-            const inputText = document.getElementById('textInput').value;
-            if (!inputText) return alert('请输入文本');
-
-            // 步骤1: 生成故事板（3-4个面板的描述）
-            const storyboard = await generateStoryboard(inputText);
-            const panels = storyboard.split('\n').filter(p => p.trim());  // 按面板分割
-
-            // 步骤2: 为每个面板生成图像
-            const panelsDiv = document.getElementById('panels');
-            panelsDiv.innerHTML = '<p>生成中...</p>';
-            for (let i = 0; i < panels.length; i++) {
-                const imageUrl = await generateImage(panels[i], `漫画风格，面板${i + 1}`);
-                panelsDiv.innerHTML += `<div class="comic-panel"><h6>面板 ${i + 1}</h6><img src="${imageUrl}" alt="面板${i + 1}"><p>${panels[i]}</p></div>`;
-            }
-        }
-
-        // API 调用：生成故事板
-        async function generateStoryboard(text) {
-            const response = await fetch('http://localhost:3000/api/text', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: TEXT_MODEL,
-                    messages: [
-                        { role: 'system', content: '你是一个漫画创作者。将输入文本转换为3-4个面板的故事板，每行描述一个面板，包括场景、角色和简单对话。用中文回复，每行一个面板。' },
-                        { role: 'user', content: text }
-                    ],
-                    max_tokens: 300,
-                    temperature: 0.7
-                })
-            });
-            const data = await response.json();
-            return data.choices[0].message.content;
-        }
-
-        // API 调用：生成图像
-        async function generateImage(prompt, style) {
-            const fullPrompt = `${prompt}。${style}，黑白线稿漫画风格，详细插图`;
-            const response = await fetch('http://localhost:3000/api/image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: IMAGE_MODEL,
-                    prompt: fullPrompt,
-                    n: 1,
-                    size: '512x512',
-                    response_format: 'url'
-                })
-            });
-            const data = await response.json();
-            return data.data[0].url;
-        }
-    </script>
 
     <!-- Bootstrap JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
