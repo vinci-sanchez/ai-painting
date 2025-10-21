@@ -1,16 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文本输入与漫画展示</title>
     <!-- Bootstrap CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <style>
-        .comic-panel { border: 2px solid #000; margin: 10px; padding: 10px; background: #fff; }
-        .comic-panel img { width: 100%; height: auto; }
+        .comic-panel {
+            border: 2px solid #000;
+            margin: 10px;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .comic-panel img {
+            width: 100%;
+            height: auto;
+        }
     </style>
 </head>
+
 <body>
     <div class="container my-5">
         <!-- 文本输入框 -->
@@ -45,19 +57,16 @@
             const panelsDiv = document.getElementById('panels');
             panelsDiv.innerHTML = '<p>生成中...</p>';
             for (let i = 0; i < panels.length; i++) {
-                const imageUrl = await generateImage(panels[i], `漫画风格，面板${i+1}`);
-                panelsDiv.innerHTML += `<div class="comic-panel"><h6>面板 ${i+1}</h6><img src="${imageUrl}" alt="面板${i+1}"><p>${panels[i]}</p></div>`;
+                const imageUrl = await generateImage(panels[i], `漫画风格，面板${i + 1}`);
+                panelsDiv.innerHTML += `<div class="comic-panel"><h6>面板 ${i + 1}</h6><img src="${imageUrl}" alt="面板${i + 1}"><p>${panels[i]}</p></div>`;
             }
         }
 
         // API 调用：生成故事板
         async function generateStoryboard(text) {
-            const response = await fetch(`${BASE_URL}/chat/completions`, {
+            const response = await fetch('http://localhost:3000/api/text', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: TEXT_MODEL,
                     messages: [
@@ -69,33 +78,32 @@
                 })
             });
             const data = await response.json();
-            console.log(data);
             return data.choices[0].message.content;
         }
 
         // API 调用：生成图像
         async function generateImage(prompt, style) {
             const fullPrompt = `${prompt}。${style}，黑白线稿漫画风格，详细插图`;
-            const response = await fetch(`${BASE_URL}/images/generations`, {  // 图像 API 端点，参考 Doubao-Image  https://ark.cn-beijing.volces.com/api/v3/chat/completions
+            const response = await fetch('http://localhost:3000/api/image', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: IMAGE_MODEL,
                     prompt: fullPrompt,
-                    n: 1,  // 生成1张图
-                    size: '512x512',  // 尺寸
-                    response_format: 'url'  // 返回 URL
+                    n: 1,
+                    size: '512x512',
+                    response_format: 'url'
                 })
             });
             const data = await response.json();
-            return data.data[0].url;  // 返回图像 URL
+            return data.data[0].url;
         }
     </script>
 
     <!-- Bootstrap JS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
 </body>
+
 </html>
