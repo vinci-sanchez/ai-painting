@@ -1,19 +1,40 @@
 {
-  "name": "ai-painting-web",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "vue": "^3.5.22",
-    "vue-router": "^4.6.3"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.1",
-    "vite": "^7.1.11"
-  }
+    "name": "ai-painting-web",
+    "version": "0.0.0",
+    "main": "electron-main.js", 
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",  
+        "build": "vite build",  
+        "preview": "vite preview", 
+        "electron:dev": "electron .",  
+        "electron:build": "vite build && electron-builder"  
+    },
+    "devDependencies": {
+        "vite": "^7.1.11",
+        "electron": "^latest", 
+        "electron-builder": "^latest"  
+    },
+    "build": {  
+        "appId": "com.example.aipainting",
+        "productName": "AI Painting App",
+        "directories": {
+            "output": "release"
+        },
+        "files": [
+            "dist/**/*",
+            "electron-main.js",
+            "preload.js"
+        ],
+        "win": {
+            "target": "nsis"
+        },
+        "mac": {
+            "target": "dmg"
+        },
+        "linux": {
+            "target": "AppImage"
+        }
+    }
 }
