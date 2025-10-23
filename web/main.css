@@ -9,3 +9,8 @@
   width: 100%;
   height: auto;
 }
+/*优化标签外观*/
+#promptTags .badge {
+    font-size: 0.9rem;
+    padding: 0.5em 0.75em;
+}

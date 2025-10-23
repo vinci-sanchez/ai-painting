@@ -1,0 +1,6 @@
+nltk==3.8.1
+keybert==0.8.5
+sentence-transformers==3.0.1
+jieba==0.42.1
+torch==2.7.1  # 或 2.6.0，2.7.1 是当前稳定版，支持 CPU/GPU
+numpy==1.26.4

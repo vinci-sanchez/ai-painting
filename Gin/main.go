@@ -2,20 +2,22 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/go-resty/resty/v2"
+	"github.com/joho/godotenv"
 )
 
 // 配置
 var (
-	APIKey   = ""
-	BaseURL  = "https://ark.cn-beijing.volces.com/api/v3"
+	APIKey  = ""
+	BaseURL = "https://ark.cn-beijing.volces.com/api/v3"
 )
 
 func main() {
@@ -88,6 +90,58 @@ func main() {
 		c.Data(resp.StatusCode(), "application/json", resp.Body())
 	})
 
+	// 新API：文本分段和关键词提取
+	r.POST("/api/segment_keywords", func(c *gin.Context) {
+		var requestBody struct {
+			Text string `json:"text"`
+		}
+		if err := c.BindJSON(&requestBody); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无法解析请求体"})
+			return
+		}
+
+		// 自动创建 python 临时文件夹
+		os.MkdirAll("python", os.ModePerm)
+
+		// 写入临时文件
+		inputFile := "python/temp_input.txt"
+		if err := os.WriteFile(inputFile, []byte(requestBody.Text), 0644); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法写入临时文件"})
+			return
+		}
+
+		// 打印当前路径（可删）
+		cwd, _ := os.Getwd()
+		fmt.Println("当前工作目录：", cwd)
+
+		// 执行 Python 脚本
+		cmd := exec.Command("D:\\github\\ai_painting\\.venv\\Scripts\\python.exe", "../python/text_segment_keyword_extract.py", inputFile)
+
+		var out bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Python脚本执行失败: " + stderr.String()})
+			return
+		}
+
+		// 读取输出
+		result, err := os.ReadFile("../python/output.json")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法读取输出文件"})
+			return
+		}
+
+		var jsonResult interface{}
+		if err := json.Unmarshal(result, &jsonResult); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "JSON解析失败"})
+			return
+		}
+
+		c.JSON(http.StatusOK, jsonResult)
+	})
+
 	// 启动服务
-	r.Run(":3000") // 监听 http://localhost:3000
+	r.Run(":3000")
 }
