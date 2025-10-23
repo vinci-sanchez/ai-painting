@@ -127,7 +127,7 @@ func main() {
 		}
 
 		// 读取输出
-		result, err := os.ReadFile("../python/output.json")
+		result, err := os.ReadFile("./output.json")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法读取输出文件"})
 			return

@@ -9,8 +9,15 @@
   width: 100%;
   height: auto;
 }
-/*优化标签外观*/
-#promptTags .badge {
-    font-size: 0.9rem;
-    padding: 0.5em 0.75em;
+
+.segment-item {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+}
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
 }
