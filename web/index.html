@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +8,6 @@
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="./main.css">
 </head>
-
 <body>
     <div class="container my-5">
         <div class="mb-4">
@@ -21,17 +19,13 @@
             <div id="promptTags" class="mt-2"></div>
             <div class="mt-3">
                 <button class="btn btn-secondary me-2">分段并显示</button>
-                <button class="btn btn-info me-2">提取关键词</button>
+                <button class="btn btn-info me-2">提取分镜和内容</button>
                 <button class="btn btn-primary">生成漫画</button>
             </div>
         </div>
         <div class="mt-4">
-            <button class="btn btn-secondary" onclick="segmentText()">分段预览</button>
+            <h5>文本分段与分镜</h5>
             <div id="segmentsList" class="mt-3"></div>
-        </div>
-        <div id="segmentsDisplay" class="mb-4">
-            <h5>文本分段</h5>
-            <div id="segmentsList"></div>
         </div>
         <div id="comicDisplay">
             <h5>漫画展示</h5>
@@ -43,5 +37,4 @@
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 </body>
-
 </html>

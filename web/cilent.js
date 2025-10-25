@@ -3,17 +3,30 @@ const API_KEY = config.API_KEY;
 const BASE_URL = config.BASE_URL;
 const TEXT_MODEL = config.TEXT_MODEL;
 const IMAGE_MODEL = config.IMAGE_MODEL;
+
+// 全局变量跟踪当前段落
+let currentSegmentIndex = -1;
+let segments = [];
+let pendingData = null; // 存储待确认的 prompt 和 storyboard
+
+// 绑定按钮事件
 document
   .querySelector(".btn.btn-secondary.me-2")
   .addEventListener("click", segmentText);
 document
   .querySelector(".btn.btn-info.me-2")
-  .addEventListener("click", extractKeywords);
-document.querySelector(".btn-primary").addEventListener("click", generateComic);
-// 新增: 处理提示词标签逻辑
+  .addEventListener("click", extractStoryboard);
+document.querySelector(".btn.btn-primary").addEventListener("click", generateComic);
+
+// 新增: 提示词标签逻辑
 document.addEventListener("DOMContentLoaded", () => {
   const promptInput = document.getElementById("promptInput");
   const promptTags = document.getElementById("promptTags");
+
+  if (!promptInput || !promptTags) {
+    console.error("未找到 promptInput 或 promptTags 元素");
+    return;
+  }
 
   promptInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && promptInput.value.trim() !== "") {
@@ -34,142 +47,157 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 分段并显示
+// 分段并显示当前段落（本地分割，不发送请求）
 async function segmentText() {
-    const inputText = document.getElementById('textInput').value.trim();
-    if (!inputText) return alert('请输入文本');
+  const inputText = document.getElementById("textInput").value.trim();
+  if (!inputText) return alert("请输入文本");
 
-    const segmentsList = document.getElementById('segmentsList');
-    segmentsList.innerHTML = '<p>分段中...</p>';
-
-    try {
-        // 按换行符分割
-        const rawSegments = inputText.split(/\n+/).map(s => s.trim()).filter(Boolean);
-        const segments = [];
-
-        let currentSegment = '';
-        for (let part of rawSegments) {
-            if ((currentSegment + part).length >= 100) {
-                segments.push(currentSegment + part);
-                currentSegment = '';
-            } else {
-                currentSegment += part + ' ';
-            }
-        }
-        if (currentSegment.trim()) segments.push(currentSegment.trim());
-
-        // 渲染结果
-        segmentsList.innerHTML = segments.map((seg, index) => `
-            <div class="segment-item">
-                <input type="checkbox" class="segment-checkbox" data-index="${index}" checked>
-                <span class="segment-text" data-index="${index}">
-                    <b>第 ${index + 1} 段：</b> ${seg}
-                </span>
-            </div>
-        `).join('');
-
-    } catch (error) {
-        segmentsList.innerHTML = `<p class="text-danger">分段失败: ${error.message}</p>`;
-    }
-}
-
-
-// 提取关键词并高亮
-async function extractKeywords() {
   const segmentsList = document.getElementById("segmentsList");
-  const checkboxes = segmentsList.querySelectorAll(".segment-checkbox:checked");
-  if (checkboxes.length === 0) return alert("请至少选择一个段落");
-
-  const selectedIndices = Array.from(checkboxes).map((cb) =>
-    parseInt(cb.dataset.index)
-  );
-  const inputText = Array.from(segmentsList.querySelectorAll(".segment-text"))
-    .filter((_, i) => selectedIndices.includes(i))
-    .map((span) => span.textContent)
-    .join("\n\n");
+  segmentsList.innerHTML = "<p>分段中...</p>";
 
   try {
-    const segments = await segmentAndExtractKeywords(inputText);
-    segments.forEach((seg, i) => {
-      const span = segmentsList.querySelector(
-        `.segment-text[data-index="${selectedIndices[i]}"]`
-      );
-      let highlightedText = seg.text;
-      seg.keywords.forEach((kw) => {
-        const regex = new RegExp(
-          `(${kw.keyword.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")})`,
-          "g"
-        );
-        highlightedText = highlightedText.replace(
-          regex,
-          `<span class="highlight">$1</span>`
-        );
+    // 按换行符分割
+    const rawSegments = inputText.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    segments = [];
+
+    let currentSegment = "";
+    for (let part of rawSegments) {
+      if ((currentSegment + part).length >= 100) {
+        segments.push(currentSegment + part);
+        currentSegment = "";
+      } else {
+        currentSegment += part + " ";
+      }
+    }
+    if (currentSegment.trim()) segments.push(currentSegment.trim());
+
+    // 重置当前段落索引
+    currentSegmentIndex = -1;
+
+    // 显示第一段
+    await showNextSegment();
+  } catch (error) {
+    segmentsList.innerHTML = `<p class="text-danger">分段失败: ${error.message}</p>`;
+  }
+}
+
+// 显示下一段文本
+async function showNextSegment() {
+  const segmentsList = document.getElementById("segmentsList");
+  if (currentSegmentIndex + 1 >= segments.length) {
+    segmentsList.innerHTML = "<p>已显示所有段落</p>";
+    return;
+  }
+
+  currentSegmentIndex++;
+  const currentSegment = segments[currentSegmentIndex];
+
+  segmentsList.innerHTML = `
+    <div class="segment-item">
+      <span class="segment-text" data-index="${currentSegmentIndex}">
+        <b>第 ${currentSegmentIndex + 1} 段文本：</b> ${currentSegment}
+      </span>
+    </div>
+  `;
+}
+
+// 提取分镜和内容
+async function extractStoryboard() {
+  const segmentsList = document.getElementById("segmentsList");
+  if (currentSegmentIndex < 0 || currentSegmentIndex >= segments.length) {
+    return alert("请先进行分段");
+  }
+
+  const currentSegment = segments[currentSegmentIndex];
+  try {
+    const response = await generateStoryboard(currentSegment);
+    pendingData = response.data; // 存储 prompt 和 storyboard
+    segmentsList.innerHTML = `
+      <div class="segment-item">
+        <span class="segment-text" data-index="${currentSegmentIndex}">
+          <b>第 ${currentSegmentIndex + 1} 段：</b><br>
+          <b>提示词：</b> ${response.data.prompt}<br>
+          <b>分镜描述：</b> ${response.data.storyboard}
+        </span>
+        <button class="btn btn-success btn-sm mt-2 confirm-storyboard" data-index="${currentSegmentIndex}">确认并生成图像</button>
+      </div>
+    `;
+
+    // 绑定确认按钮事件
+    document.querySelectorAll(".confirm-storyboard").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await generateComicFromConfirmed();
       });
-      span.innerHTML = highlightedText;
     });
   } catch (error) {
-    alert(`关键词提取失败: ${error.message}`);
+    segmentsList.innerHTML = `<p class="text-danger">分镜提取失败: ${error.message}</p>`;
+  }
+}
+
+// 从确认的故事板生成漫画
+async function generateComicFromConfirmed() {
+  const panelsDiv = document.getElementById("panels");
+  if (!pendingData) {
+    panelsDiv.innerHTML = "<p class='text-danger'>没有待确认的故事板</p>";
+    return;
+  }
+
+  panelsDiv.innerHTML = "<p>生成中...</p>";
+
+  try {
+    const imageData = await generateImage(pendingData.prompt, pendingData.storyboard);
+    panelsDiv.innerHTML = `
+      <div class="comic-panel">
+        <h6>面板 ${currentSegmentIndex + 1}</h6>
+        <img src="data:image/png;base64,${imageData.image_base64}" alt="面板${currentSegmentIndex + 1}">
+        <p>${pendingData.storyboard}</p>
+      </div>
+    `;
+    // 显示下一段文本
+    await showNextSegment();
+  } catch (error) {
+    panelsDiv.innerHTML = `<p class="text-danger">漫画生成失败: ${error.message}</p>`;
   }
 }
 
 // 生成漫画
 async function generateComic() {
-  const segmentsList = document.getElementById("segmentsList");
-  const checkboxes = segmentsList.querySelectorAll(".segment-checkbox:checked");
-  if (checkboxes.length === 0) return alert("请至少选择一个段落");
+  if (currentSegmentIndex < 0 || currentSegmentIndex >= segments.length) {
+    return alert("请先进行分段");
+  }
 
-  const selectedIndices = Array.from(checkboxes).map((cb) =>
-    parseInt(cb.dataset.index)
-  );
-  const segments = Array.from(segmentsList.querySelectorAll(".segment-text"))
-    .filter((_, i) => selectedIndices.includes(i))
-    .map((span) => span.textContent);
+  if (!pendingData) {
+    return alert("请先提取分镜和内容");
+  }
 
+  await generateComicFromConfirmed();
+}
+
+// API 调用：生成分镜和内容
+async function generateStoryboard(text) {
   const promptTags = document.getElementById("promptTags");
+  if (!promptTags) {
+    console.error("未找到 promptTags 元素");
+    return { data: { prompt: text, storyboard: text } }; // 回退逻辑
+  }
+
   const prompts = Array.from(promptTags.querySelectorAll(".badge")).map((tag) =>
     tag.textContent.trim().replace(/×$/, "").trim()
   );
+  const extraPrompts = prompts.length > 0 ? `, 附加提示词: ${prompts.join(", ")}` : "";
+  console.log("发送 /api/text 请求体:", JSON.stringify({
+    model: TEXT_MODEL,
+    messages: [
+      {
+        role: "system",
+        content: "你是一个漫画创作者。将输入文本转换为1个图片的故事板，每行描述一个分镜，包括场景、角色和简单对话。用中文回复，将所有分镜合并为一个故事板，并生成对应的提示词，最后输出对应的英文。",
+      },
+      { role: "user", content: text + extraPrompts },
+    ],
+    max_tokens: 300,
+    temperature: 0.7,
+  }));
 
-  const panelsDiv = document.getElementById("panels");
-  panelsDiv.innerHTML = "<p>生成中...</p>";
-
-  for (let i = 0; i < Math.min(segments.length, 4); i++) {
-    const segment = segments[i];
-    const prompt = `${segment}。${
-      prompts.length > 0 ? `附加提示词: ${prompts.join(", ")}` : ""
-    }`;
-    const storyboard = await generateStoryboard(prompt);
-    const panelDesc =
-      storyboard.split("\n").filter((p) => p.trim())[i % 4] || segment;
-    const imageUrl = await generateImage(
-      panelDesc,
-      `漫画风格，面板${i + 1}`,
-      prompts
-    );
-    panelsDiv.innerHTML += `
-            <div class="comic-panel">
-                <h6>面板 ${i + 1}</h6>
-                <img src="${imageUrl}" alt="面板${i + 1}">
-                <p>${panelDesc}</p>
-            </div>`;
-  }
-}
-
-// API 调用：分段和关键词提取
-async function segmentAndExtractKeywords(text) {
-  const response = await fetch("http://localhost:3000/api/segment_keywords", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-  if (!response.ok) throw new Error("分段和关键词提取失败");
-  const data = await response.json();
-  console.log("response:", data);
-  return data;
-}
-
-// API 调用：生成故事板
-async function generateStoryboard(text) {
   const response = await fetch("http://localhost:3000/api/text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -178,34 +206,38 @@ async function generateStoryboard(text) {
       messages: [
         {
           role: "system",
-          content:
-            "你是一个漫画创作者。将输入文本转换为1个图片的故事板,每行描述一个分镜,包括场景、角色和简单对话。用中文回复,将所有分镜合并为一个故事板。",
+          content: "你是一个漫画创作者。将输入文本转换为1个图片的故事板，每行描述一个分镜，包括场景、角色和简单对话。用中文回复，将所有分镜合并为一个故事板，并生成对应的提示词，最后输出对应的英文。",
         },
-        { role: "user", content: text },
+        { role: "user", content: text + extraPrompts },
       ],
       max_tokens: 300,
       temperature: 0.7,
     }),
   });
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("错误响应 /api/text:", errorData);
+    throw new Error(`分镜生成失败: ${errorData.error || response.statusText}`);
+  }
   const data = await response.json();
-  return data.choices[0].message.content;
+  console.log("收到 /api/text 响应:", data);
+  return data; // 期望 { message, data: { prompt, storyboard } }
 }
 
 // API 调用：生成图像
-async function generateImage(prompt, style, prompts = []) {
-  const extraPrompts = prompts.length > 0 ? `, ${prompts.join(", ")}` : "";
-  const fullPrompt = `${prompt}。${style}，黑白线稿漫画风格，详细插图${extraPrompts}`;
-  const response = await fetch("http://localhost:3000/api/image", {
+async function generateImage(prompt, storyboard) {
+  console.log("发送 /generate_image 请求");
+  const response = await fetch("http://localhost:3000/generate_image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: IMAGE_MODEL,
-      prompt: fullPrompt,
-      n: 1,
-      size: "512x512",
-      response_format: "url",
-    }),
+    body: JSON.stringify({}),
   });
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("错误响应 /generate_image:", errorData);
+    throw new Error(`图像生成失败: ${errorData.error || response.statusText}`);
+  }
   const data = await response.json();
-  return data.data[0].url;
+  console.log("收到 /generate_image 响应:", data);
+  return data; // 返回 { image_base64: "..." }
 }

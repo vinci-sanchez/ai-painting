@@ -3,3 +3,7 @@ web copy1
 web/src
 Gin/output.json
 Gin/python/temp_input.txt
+.vscode/
+Gin/app.log
+server.md
+web1
