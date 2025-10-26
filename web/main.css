@@ -1,23 +1,194 @@
+/* main.css */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --info-color: #17a2b8;
+  --background-color: #f8f9fa;
+  --text-color: #333;
+  --border-radius: 8px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif; /* 使用适合中文的字体 */
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 900px; /* 限制容器宽度以提高可读性 */
+}
+
+/* 卡片样式 */
+.card {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px); /* 悬停时轻微上移 */
+}
+
+/* 输入框和按钮 */
+.form-control {
+  border-radius: var(--border-radius);
+  transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+.btn {
+  border-radius: var(--border-radius);
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px); /* 按钮悬停效果 */
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+.btn-info {
+  background-color: var(--info-color);
+  border-color: var(--info-color);
+}
+
+.btn-success {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+/* 漫画面板 */
 .comic-panel {
   border: 2px solid #000;
-  margin: 10px;
-  padding: 10px;
+  margin: 15px 0;
+  padding: 15px;
   background: #fff;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease;
+}
+
+.comic-panel:hover {
+  transform: translateY(-5px);
 }
 
 .comic-panel img {
   width: 100%;
   height: auto;
+  border-radius: var(--border-radius);
+  object-fit: cover; /* 确保图像比例合适 */
 }
 
+/* 分段项 */
 .segment-item {
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 10px;
-  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 15px;
+  background: #fff;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
 }
 
+/* 高亮样式 */
 .highlight {
-  background-color: yellow;
+  background-color: #fff3cd;
   font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* 提示词标签 */
+.badge {
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  border-radius: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.badge .btn-close {
+  margin-left: 5px;
+  font-size: 0.6rem;
+}
+
+/* 加载动画 */
+#segmentsList:empty::before,
+#panels:empty::before,
+#result:empty::before {
+  content: "加载中...";
+  color: var(--secondary-color);
+  font-style: italic;
+}
+
+/* 响应式设计 */
+@media (max-width: 576px) {
+  .container {
+    padding: 15px;
+  }
+
+  .btn {
+    width: 100%; /* 小屏幕上按钮占满宽度 */
+    margin-bottom: 10px;
+  }
+
+  .d-flex {
+    flex-direction: column; /* 按钮垂直排列 */
+  }
+}
+
+/* 错误提示 */
+.text-danger {
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+.alert {
+  margin-bottom: 20px;
+  padding: 10px;
+  border-radius: var(--border-radius);
+}
+/* main.css 补充样式 */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.comic-panel {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border-radius: var(--border-radius);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.comic-panel img {
+    max-height: 400px;
+    object-fit: contain;
+}
+
+.section-title {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+}
+
+footer {
+    margin-top: 40px;
+    padding: 20px 0;
 }
