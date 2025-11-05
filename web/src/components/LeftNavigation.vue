@@ -14,19 +14,19 @@
     >
       <el-menu-item index="1">
         <el-icon><location /></el-icon>
-        <template #title>crawl-or-copy</template>
+        <template #title>爬取或上传</template>
       </el-menu-item>
       <el-menu-item index="2">
         <el-icon><icon-menu /></el-icon>
-        <template #title>Segmented</template>
+        <template #title>分段</template>
       </el-menu-item>
       <el-menu-item index="3">
         <el-icon><document /></el-icon>
-        <template #title>parameter-preview</template>
+        <template #title>参数预览</template>
       </el-menu-item>
       <el-menu-item index="4">
         <el-icon><setting /></el-icon>
-        <template #title>comic</template>
+        <template #title>漫画</template>
       </el-menu-item>
     </el-menu>
   </div>
@@ -55,6 +55,11 @@ const handleSidebarClick = (event: MouseEvent) => {
   }
   isCollapse.value = !isCollapse.value;
 };
+</script>
+<!-- 路由控制 -->
+<script setup>
+import { useRouter } from "vue-router";
+const router = useRouter();
 </script>
 
 <style>
