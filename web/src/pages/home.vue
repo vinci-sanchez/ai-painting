@@ -4,16 +4,13 @@
       <LeftNavigation />
     </aside>
     <main class="home-layout__content">
-      <CrawlCopy />
-      <Segmented />
+      <RouterView />
     </main>
   </div>
 </template>
 
 <script setup>
-import CrawlCopy from "./home-show/crawl-or-copy/crawlcopy.vue";
 import LeftNavigation from "../components/LeftNavigation.vue";
-import Segmented from "./home-show/Segmented/Segmented.vue";
 
 </script>
 

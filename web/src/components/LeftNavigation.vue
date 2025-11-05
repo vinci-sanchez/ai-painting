@@ -5,26 +5,27 @@
     @click="handleSidebarClick"
   >
     <el-menu
-      default-active="2"
+      :default-active="activeMenu"
       class="el-menu-vertical-demo sidebar-menu"
       :collapse="isCollapse"
       @open="handleOpen"
       @close="handleClose"
+      @select="handleSelect"
       style="height: 100vh"
     >
-      <el-menu-item index="1">
+      <el-menu-item index="home-crawlcopy">
         <el-icon><location /></el-icon>
         <template #title>爬取或上传</template>
       </el-menu-item>
-      <el-menu-item index="2">
+      <el-menu-item index="home-segmented">
         <el-icon><icon-menu /></el-icon>
         <template #title>分段</template>
       </el-menu-item>
-      <el-menu-item index="3">
+      <el-menu-item index="home-parameter-preview">
         <el-icon><document /></el-icon>
         <template #title>参数预览</template>
       </el-menu-item>
-      <el-menu-item index="4">
+      <el-menu-item index="home-comic">
         <el-icon><setting /></el-icon>
         <template #title>漫画</template>
       </el-menu-item>
@@ -33,13 +34,17 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import {
   Document,
   Menu as IconMenu,
   Location,
   Setting,
 } from "@element-plus/icons-vue";
+import { useRoute, useRouter } from "vue-router";
+
+const router = useRouter();
+const route = useRoute();
 
 const isCollapse = ref(true);
 const handleOpen = (key: string, keyPath: string[]) => {
@@ -55,11 +60,18 @@ const handleSidebarClick = (event: MouseEvent) => {
   }
   isCollapse.value = !isCollapse.value;
 };
-</script>
-<!-- 路由控制 -->
-<script setup>
-import { useRouter } from "vue-router";
-const router = useRouter();
+
+const activeMenu = computed(() => {
+  const name = route.name;
+  return typeof name === "string" ? name : "home-crawlcopy";
+});
+
+const handleSelect = (index: string) => {
+  if (index === activeMenu.value) {
+    return;
+  }
+  router.push({ name: index });
+};
 </script>
 
 <style>
@@ -70,10 +82,6 @@ const router = useRouter();
   background-color: var(--el-menu-bg-color, transparent);
   transition: width 0.2s ease;
 }
-
-/* .sidebar--collapsed {
-  width: 64px;
-} */
 
 .sidebar-menu {
   flex: 0 0 auto;
