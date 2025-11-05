@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
-//import vue from "@vitejs/plugin-vue";
+import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
-  //plugins: [vue()],
+  plugins: [vue()],
   base: "./",
   build: {
     outDir: "dist", // 确保构建到 dist

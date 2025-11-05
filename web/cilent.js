@@ -1,8 +1,10 @@
 import config from "./config.js";
+
 const API_KEY = config.API_KEY;
 const BASE_URL = config.BASE_URL;
 const TEXT_MODEL = config.TEXT_MODEL;
 const IMAGE_MODEL = config.IMAGE_MODEL;
+const BAKE_URL = config.BAKE_URL;
 
 // 全局变量
 let currentSegmentIndex = -1;
@@ -10,12 +12,12 @@ let segments = [];
 let pendingData = null;
 let last_image = null;
 // 全局错误处理
-window.addEventListener("error", (e) =>
-  console.error("全局错误:", e.error || e.message, e)
-);
-window.addEventListener("unhandledrejection", (e) =>
-  console.error("未处理 Promise 拒绝:", e.reason)
-);
+// window.addEventListener("error", (e) =>
+//   console.error("全局错误:", e.error || e.message, e)
+// );
+// window.addEventListener("unhandledrejection", (e) =>
+//   console.error("未处理 Promise 拒绝:", e.reason)
+// );
 
 // 等待 DOM 加载完成
 document.addEventListener("DOMContentLoaded", () => {
@@ -379,87 +381,87 @@ async function generateImage(data) {
 }
 
 // 爬取小说章节
-let nextIndex = 0;
-async function crawl() {
-  const url = document.getElementById("novelUrl").value;
-  const resultDiv = document.getElementById("result");
-  const errorMessage = document.getElementById("error-message");
+// let nextIndex = 0;
+// async function crawl() {
+//   const url = document.getElementById("novelUrl").value;
+//   const resultDiv = document.getElementById("result");
+//   const errorMessage = document.getElementById("error-message");
 
-  if (!url) {
-    if (errorMessage) {
-      errorMessage.textContent = "请输入有效的URL";
-      errorMessage.classList.remove("d-none");
-    }
-    return;
-  }
+//   if (!url) {
+//     if (errorMessage) {
+//       errorMessage.textContent = "请输入有效的URL";
+//       errorMessage.classList.remove("d-none");
+//     }
+//     return;
+//   }
 
-  if (errorMessage) errorMessage.classList.add("d-none");
+//   if (errorMessage) errorMessage.classList.add("d-none");
 
-  try {
-    const response = await fetch("http://localhost:3000/api/crawl", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        novel_url: url,
-        start_index: nextIndex,
-        limit: 5,
-      }),
-    });
+//   try {
+//     const response = await fetch("http://localhost:3000/api/crawl", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({
+//         novel_url: url,
+//         start_index: nextIndex,
+//         limit: 5,
+//       }),
+//     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP错误：状态码 ${response.status}`);
-    }
+//     if (!response.ok) {
+//       throw new Error(`HTTP错误：状态码 ${response.status}`);
+//     }
 
-    const data = await response.json();
-    console.log("API响应：", data);
+//     const data = await response.json();
+//     console.log("API响应：", data);
 
-    if (data.error) {
-      if (errorMessage) {
-        errorMessage.textContent = `错误：${data.error}`;
-        errorMessage.classList.remove("d-none");
-      }
-      return;
-    }
+//     if (data.error) {
+//       if (errorMessage) {
+//         errorMessage.textContent = `错误：${data.error}`;
+//         errorMessage.classList.remove("d-none");
+//       }
+//       return;
+//     }
 
-    if (!data.chapters || !Array.isArray(data.chapters)) {
-      if (errorMessage) {
-        errorMessage.textContent = "错误：未收到有效章节数据";
-        errorMessage.classList.remove("d-none");
-      }
-      return;
-    }
+//     if (!data.chapters || !Array.isArray(data.chapters)) {
+//       if (errorMessage) {
+//         errorMessage.textContent = "错误：未收到有效章节数据";
+//         errorMessage.classList.remove("d-none");
+//       }
+//       return;
+//     }
 
-    // 更新 nextIndex
-    nextIndex = data.next_index;
+//     // 更新 nextIndex
+//     nextIndex = data.next_index;
 
-    // 清空 resultDiv 并显示当前爬取的章节
-    resultDiv.innerHTML = "";
-    data.chapters.forEach((ch) => {
-      resultDiv.innerHTML += `<h3>${ch.title}</h3><p>${ch.content}</p><hr>`;
-    });
+//     // 清空 resultDiv 并显示当前爬取的章节
+//     resultDiv.innerHTML = "";
+//     data.chapters.forEach((ch) => {
+//       resultDiv.innerHTML += `<h3>${ch.title}</h3><p>${ch.content}</p><hr>`;
+//     });
 
-    // 添加“继续爬取”按钮，仅在有更多章节时显示
-    if (nextIndex < data.total_chapters) {
-      resultDiv.innerHTML += `<button id="continue-crawl" class="btn btn-primary">继续爬取</button>`;
-      // 为“继续爬取”按钮绑定事件
-      const continueBtn = document.getElementById("continue-crawl");
-      if (continueBtn) {
-        continueBtn.addEventListener("click", crawl);
-      }
-    } else {
-      resultDiv.innerHTML += "<p>已爬取所有章节</p>";
-    }
+//     // 添加“继续爬取”按钮，仅在有更多章节时显示
+//     if (nextIndex < data.total_chapters) {
+//       resultDiv.innerHTML += `<button id="continue-crawl" class="btn btn-primary">继续爬取</button>`;
+//       // 为“继续爬取”按钮绑定事件
+//       const continueBtn = document.getElementById("continue-crawl");
+//       if (continueBtn) {
+//         continueBtn.addEventListener("click", crawl);
+//       }
+//     } else {
+//       resultDiv.innerHTML += "<p>已爬取所有章节</p>";
+//     }
 
-    // 将爬取内容自动填入文本框
-    const textInput = document.getElementById("textInput");
-    textInput.value = data.chapters
-      .map((ch) => `${ch.title}\n${ch.content}`)
-      .join("\n");
-  } catch (error) {
-    console.error("爬取错误：", error);
-    if (errorMessage) {
-      errorMessage.textContent = `爬取失败：${error.message}`;
-      errorMessage.classList.remove("d-none");
-    }
-  }
-}
+//     // 将爬取内容自动填入文本框
+//     const textInput = document.getElementById("textInput");
+//     textInput.value = data.chapters
+//       .map((ch) => `${ch.title}\n${ch.content}`)
+//       .join("\n");
+//   } catch (error) {
+//     console.error("爬取错误：", error);
+//     if (errorMessage) {
+//       errorMessage.textContent = `爬取失败：${error.message}`;
+//       errorMessage.classList.remove("d-none");
+//     }
+//   }
+// }

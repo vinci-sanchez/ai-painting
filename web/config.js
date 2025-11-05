@@ -3,5 +3,6 @@ const config = {
   BASE_URL: "https://ark.cn-beijing.volces.com/api/v3",
   TEXT_MODEL: "ep-20251021151025-8q7tt",
   IMAGE_MODEL: "ep-20251021153509-xh86n",
+  BAKE_URL: "http://localhost:3000",
 };
 export default config;

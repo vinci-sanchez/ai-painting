@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,18 @@
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./main.css">
+    <script type="module" src="./src/main.js"></script>
+    <script src="//unpkg.com/@element-plus/icons-vue"></script>
+    <!-- <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+
+    <script src="https://unpkg.com/element-plus"></script> -->
+
 </head>
+
 <body>
+
     <!-- 导航栏 -->
+    <!-- <div id="navigation"></div>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="#">小说转漫画</a>
@@ -32,15 +42,18 @@
                 </ul>
             </div>
         </div>
-    </nav>
+    </nav> -->
+
+    <div id="app"></div>
+
 
     <!-- 主容器 -->
     <div class="container my-5">
         <!-- 错误提示 -->
-        <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+        <!-- <div id="error-message" class="alert alert-danger d-none" role="alert"></div> -->
 
         <!-- 小说爬取部分 -->
-        <section id="crawl-section" class="card mb-5 shadow-lg">
+        <!-- <section id="crawl-section" class="card mb-5 shadow-lg">
             <div class="card-body">
                 <h2 class="card-title text-center mb-4">小说爬取</h2>
                 <p class="text-muted text-center">支持从笔趣看（https://www.blqukk.cc/）爬取小说章节</p>
@@ -51,10 +64,9 @@
                 </div>
                 <div id="result" class="mt-4 p-3 bg-light rounded"></div>
             </div>
-        </section>
-
+        </section> -->
         <!-- 文本输入部分 -->
-        <section id="input-section" class="card mb-5 shadow-lg">
+        <!-- <section id="input-section" class="card mb-5 shadow-lg">
             <div class="card-body">
                 <h2 class="card-title text-center mb-4">小说文本输入</h2>
                 <p class="text-muted text-center">输入小说文本，转换为漫画故事</p>
@@ -63,11 +75,16 @@
                     <textarea class="form-control" id="textInput" rows="8"
                         placeholder="请输入小说文本，例如：&#10;第一章 森林冒险&#10;小猫咪咪在森林里迷路了..." aria-label="小说文本"></textarea>
                 </div>
-                <!-- <div class="mb-3">
-                    <label for="promptInput" class="form-label">提示词（按回车添加，可选）</label>
-                    <input type="text" class="form-control" id="promptInput" placeholder="输入提示词后按回车" aria-label="提示词">
-                    <div id="promptTags" class="mt-2"></div>
-                </div> -->
+
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary"><i class="fas fa-cut"></i> 分段并显示</button>
+                    <button type="button" class="btn btn-outline-info"><i class="fas fa-film"></i> 提取分镜和内容</button>
+                    <button type="button" class="btn btn-primary"><i class="fas fa-paint-brush"></i> 生成漫画</button>
+                </div>
+            </div>
+        </section> -->
+        <section id="input-section" class="card mb-5 shadow-lg">
+            <div class="card-body">
                 <div class="d-flex flex-wrap gap-2 justify-content-center">
                     <button type="button" class="btn btn-outline-secondary"><i class="fas fa-cut"></i> 分段并显示</button>
                     <button type="button" class="btn btn-outline-info"><i class="fas fa-film"></i> 提取分镜和内容</button>
@@ -75,7 +92,6 @@
                 </div>
             </div>
         </section>
-
         <!-- 分段与分镜展示 -->
         <section id="segment-section" class="card mb-5 shadow-lg">
             <div class="card-body">
@@ -95,7 +111,7 @@
 
     <!-- 页脚 -->
     <footer class="bg-dark text-white text-center py-3">
-        <p class="mb-0">© 2025 小说转漫画生成器 | Powered by xAI</p>
+        <p class="mb-0">© 啊吧啊吧啊吧啊</p>
     </footer>
 
     <script type="module" src="./cilent.js"></script>
@@ -103,4 +119,5 @@
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 </body>
+
 </html>
