@@ -84,12 +84,13 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 
 import config from "../../config.json";
 import bus from "../eventBus.js";
+import { setSharedText, sharedText } from "../shared-text";
 
 type Chapter = { title: string; content: string };
 type CrawlResponse = {
@@ -105,7 +106,7 @@ const num = ref(1);
 
 const isDone = ref(false);
 const router = useRouter();
-const textContent = ref("");
+const textContent = ref(sharedText.value);
 
 const canNavigate = computed(() => textContent.value.trim().length > 0);
 
@@ -114,6 +115,7 @@ const goToSegmented = () => {
     ElMessage.warning("请先输入内容或完成爬取");
     return;
   }
+  setSharedText(textContent.value);
   router.push({ name: "home-segmented" });
 };
 
@@ -130,6 +132,7 @@ function finishTask(input?: string) {
   // 全局广播信息
   bus.emit("task-finished", info);
   textContent.value = input ?? "";
+  setSharedText(textContent.value);
 }
 
 //爬取小说
@@ -224,4 +227,11 @@ async function crawl() {
     }
   }
 }
+
+watch(
+  () => textContent.value,
+  (value) => {
+    setSharedText(value);
+  }
+);
 </script>

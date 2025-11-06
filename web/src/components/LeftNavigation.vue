@@ -23,7 +23,7 @@
       </el-menu-item>
       <el-menu-item index="home-parameter-preview">
         <el-icon><document /></el-icon>
-        <template #title>参数预览</template>
+        <template #title>分镜预览</template>
       </el-menu-item>
       <el-menu-item index="home-comic">
         <el-icon><setting /></el-icon>
