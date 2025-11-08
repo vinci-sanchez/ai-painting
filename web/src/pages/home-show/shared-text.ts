@@ -4,4 +4,19 @@ export const sharedText = ref("");
 
 export function setSharedText(value: string) {
   sharedText.value = value;
+  
 }
+export const Storyboard = ref("");
+
+export function setStoryboard(value: string) {
+  Storyboard.value = value;
+
+}
+export const comicText = ref("");
+
+export function setComicText(value: string) {
+  comicText.value = value;
+
+}
+
+

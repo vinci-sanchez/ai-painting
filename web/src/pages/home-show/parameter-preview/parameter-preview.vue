@@ -90,11 +90,11 @@
       <el-descriptions-item label="创造时间">
         {{ now_time }}
       </el-descriptions-item>
-      <el-descriptions-item label="风格"></el-descriptions-item>
-      <el-descriptions-item label="色调"></el-descriptions-item>
+      <el-descriptions-item label="风格">{{ color }}</el-descriptions-item>
+      <el-descriptions-item label="色调">{{ style }}</el-descriptions-item>
 
       <el-descriptions-item label="提示词">
-        <el-tag size="small">School</el-tag>
+        <el-tag v-for="value in customTags" size="small">{{ value }}</el-tag>
       </el-descriptions-item>
     </el-descriptions>
     <p>分镜内容</p>
@@ -113,13 +113,17 @@
       v-model="character"
       :autosize="{ minRows: 10, maxRows: 20 }"
     ></el-input>
-    <p v-for="o in 4" :key="o" class="text item">{{ "List item " + o }}</p>
-    <template #footer>Footer content</template>
+    <template #footer
+      ><el-button type="primary" style="margin-right: 30px"
+        >123</el-button
+      ></template
+    >
   </el-card>
 </template>
 <script lang="ts" setup>
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import { ElMessage } from "element-plus";
+import bus from "../eventBus.js";
 import {
   Iphone,
   Location,
@@ -127,6 +131,7 @@ import {
   Tickets,
   User,
 } from "@element-plus/icons-vue";
+import { setComicText, comicText } from "../shared-text";
 
 const novel = ref("");
 
@@ -172,10 +177,47 @@ const promptSegments = computed(() =>
 const scene = ref("");
 const prompt = ref("");
 const character = ref("");
-async function getparameter(){
+const style = ref("");
+const color = ref("");
+const customTags = ref<string[]>([]);
+type StoryboardPayload = {
+  scene?: string;
+  prompt?: string;
+  character?: string;
+};
 
-}
+type StoryboardMetaPayload = {
+  style?: string;
+  color?: string;
+  hints?: string[];
+};
 
+const handleStoryboard = (payload: unknown) => {
+  const data = (payload as StoryboardPayload) ?? {};
+  scene.value = data.scene ?? "";
+  prompt.value = data.prompt ?? "";
+  character.value = data.character ?? "";
+  console.log("收到分镜数据:", data);
+};
+
+const handleMeta = (payload: unknown) => {
+  const data = (payload as StoryboardMetaPayload) ?? {};
+  style.value = data.style ?? "";
+  color.value = data.color ?? "";
+  customTags.value = Array.isArray(data.hints) ? data.hints : [];
+  console.log("收到分镜元数据:", data);
+};
+
+onMounted(() => {
+  console.log("开始监听分镜生成事件");
+  bus.on("storyboard-generated", handleStoryboard);
+  bus.on("comic-generated", handleMeta);
+});
+
+onBeforeUnmount(() => {
+  bus.off("storyboard-generated", handleStoryboard);
+  bus.off("comic-generated", handleMeta);
+});
 
 const size = ref<"default" | "small" | "large">("default");
 

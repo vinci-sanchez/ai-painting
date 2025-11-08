@@ -70,7 +70,11 @@
         />
       </p>
       <template #footer>
-        <button type="button" class="btn btn-outline-info">
+        <button
+          type="button"
+          class="btn btn-outline-info"
+          @click="gotoparameter_preview"
+        >
           <i class="fas fa-film"></i> 提取分镜
         </button>
       </template>
@@ -82,12 +86,28 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import bus from "../eventBus.js";
-import { sharedText } from "../shared-text";
-
+import {
+  sharedText,
+  setSharedText,
+  setStoryboard,
+  Storyboard,
+} from "../shared-text";
+import { comicText, setComicText } from "../shared-text";
+import config from "../../config.json";
+import { preview } from "vite";
+import { te } from "element-plus/es/locale/index.mjs";
+import router from "../../../router.js";
+const TEXT_MODEL = config.TEXT_MODEL;
+const BAKE_URL = config.BAKE_URL;
 type TaskInfo = {
   status?: string;
   time?: string;
   message?: string;
+};
+type ComicInfo = {
+  style?: string;
+  color?: string;
+  hints?: string[];
 };
 
 const props = defineProps<{ text?: string }>();
@@ -101,6 +121,7 @@ const currentIndex = ref(0);
 const other_hint = ref<string[]>();
 const color = ref("");
 const style = ref("");
+
 const style_options = [
   { value: "写实", label: "写实" },
   { value: "普通", label: "普通" },
@@ -228,10 +249,38 @@ watch(
   }
 );
 
-import config from"../../config.json"
-const TEXT_MODEL=config.TEXT_MODEL;
+const emitStoryboard = (data: {
+  scene?: string;
+  prompt?: string;
+  character?: string;
+}) => {
+  console.log("分镜数据:", data);
 
+  setStoryboard(Storyboard.value);
+  bus.emit("storyboard-generated", data);
+};
 
+const emitComic = (data: {
+  style?: string;
+  color?: string;
+  hints?: string[];
+}) => {
+  console.log("漫画类型数据:", data);
+  setComicText(comicText.value);
+  bus.emit("comic-generated", data);
+};
+
+/////跳转
+async function gotoparameter_preview() {
+  if (!textParagraph.value || textParagraph.value.trim().length === 0) {
+    ElMessage.warning("请确认文本后再生成分镜");
+    return;
+  }
+  router.push({ name: "home-parameter-preview" });
+  await generateStoryboard(textParagraph.value);
+  console.log("自动分镜生成完成");
+}
+/////分镜
 async function generateStoryboard(text?: string) {
   const promptTags = document.getElementById("promptTags");
   const prompts = promptTags
@@ -259,7 +308,8 @@ async function generateStoryboard(text?: string) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
-    const response = await fetch("http://localhost:3000/api/text", {
+    const response = await fetch(`${BAKE_URL}/api/text`, {
+      //http://localhost:3000
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
@@ -287,7 +337,11 @@ async function generateStoryboard(text?: string) {
       prompt: "默认提示词",
       character: "",
     };
-
+    const comicData = {
+      style: style.value,
+      color: color.value,
+      hints: other_hint.value || [],
+    };
     const sceneMatch = textContent.match(/scene:([\s\S]*?)(?=;prompt:|$)/);
     const promptMatch = textContent.match(/prompt:([\s\S]*?)(?=;character:|$)/);
     const characterMatch = textContent.match(/character:([\s\S]*?)(?=;|$)/);
@@ -312,6 +366,10 @@ async function generateStoryboard(text?: string) {
     // if (last_image !== null) {
     //   parsedData.init_image = last_image;
     // }
+    ////////////////////////////发送总线信号
+    emitStoryboard(parsedData);
+    emitComic(comicData);
+
     return { data: parsedData };
   } catch (error) {
     console.error("generateStoryboard 错误:", error);
