@@ -1,0 +1,6 @@
+name = "text-to-manga"
+pages_build_output_dir = "./web/dist"
+
+[pages]
+# 自定义 functions 目录
+functions_dir = "./Gin"
