@@ -130,7 +130,7 @@
 defineOptions({ name: "parameter-preview" });
 import { computed, ref, onMounted, onBeforeUnmount, toRaw } from "vue";
 import { ElMessage } from "element-plus";
-import bus from "../eventBus.js";
+import bus from "../eventbus.js";
 import {
   Iphone,
   Location,

@@ -90,7 +90,7 @@ import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 
 import config from "../../config.json";
-import bus from "../eventBus.js";
+import bus from "../eventbus.js";
 import { setSharedText, sharedText } from "../shared-text";
 
 type Chapter = { title: string; content: string };

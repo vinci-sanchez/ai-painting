@@ -55,7 +55,7 @@
 <script lang="ts" setup>
 import { ref ,onMounted,onBeforeUnmount} from "vue";
 import type { ImageProps } from "element-plus";
-import bus from "../eventBus.js";
+import bus from "../eventbus.js";
 import { comicimage,setComicImage } from "../shared-text";
 
 type ComicPage = {

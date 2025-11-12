@@ -86,7 +86,7 @@
 defineOptions({ name: "Segmented" });
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import bus from "../eventBus.js";
+import bus from "../eventbus.js";
 import {
   sharedText,
   setSharedText,
