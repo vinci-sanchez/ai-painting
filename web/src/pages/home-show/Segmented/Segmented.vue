@@ -65,7 +65,7 @@
         <el-input-tag
           v-model="other_hint"
           style="width: 240px"
-          placeholder="请输入提示词"
+          placeholder="请输入提示词(可填可不填)"
           aria-label="Please click the Enter key after input"
         />
       </p>
@@ -83,6 +83,7 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({ name: "Segmented" });
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import bus from "../eventBus.js";
@@ -98,7 +99,7 @@ import { preview } from "vite";
 import { te } from "element-plus/es/locale/index.mjs";
 import router from "../../../router.js";
 const TEXT_MODEL = config.TEXT_MODEL;
-const BAKE_URL = config.BAKE_URL;
+const BACK_URL = config.BACK_URL;
 type TaskInfo = {
   status?: string;
   time?: string;
@@ -119,17 +120,18 @@ const segments = ref<string[]>([]);
 const currentIndex = ref(0);
 
 const other_hint = ref<string[]>();
-const color = ref("");
-const style = ref("");
+const color = ref("黑白");
+const style = ref("日式漫画");
 
 const style_options = [
-  { value: "写实", label: "写实" },
-  { value: "普通", label: "普通" },
+  { value: "日式漫画", label: "日式漫画" },
+  { value: "美式漫画", label: "美式漫画" },
+  { value: "中式漫画", label: "中式漫画" },
   { value: "赛博朋克", label: "赛博朋克" },
-  { value: "幻想", label: "幻想" },
+  { value: "线描", label: "线描" },
 ];
 const color_options = [
-  { value: "黑暗", label: "黑暗" },
+  { value: "黑白", label: "黑白" },
   { value: "暖色", label: "暖色" },
   { value: "冷色", label: "冷色" },
   { value: "水彩", label: "水彩" },
@@ -296,7 +298,7 @@ async function generateStoryboard(text?: string) {
       {
         role: "system",
         content:
-          "你是一个漫画创作者。将输入文本转换为1个图片的漫画，要求含有场景，提示词和人物(若有的话依照人物名称生成符合该人物的服饰，长相，没有就返回null)，输出格式为纯文本，字段按以下格式：scene:...;prompt:...;character:...;字段间用分号分隔，不包含换行符，用中文回答我。",
+          "你是一个漫画创作者。将输入文本转换为1个图片的四格漫画，要求含有场景，提示词和人物(若有的话依照人物名称生成符合该人物的服饰，长相，没有就返回null)，输出格式为纯文本，字段按以下格式：scene:...;prompt:...;character:...;字段间用分号分隔，不包含换行符，用中文回答我。",
       },
       { role: "user", content: text + extraPrompts },
     ],
@@ -308,7 +310,7 @@ async function generateStoryboard(text?: string) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
-    const response = await fetch(`${BAKE_URL}/api/text`, {
+    const response = await fetch(`${BACK_URL}/api/text`, {
       //http://localhost:3000
       method: "POST",
       headers: { "Content-Type": "application/json" },

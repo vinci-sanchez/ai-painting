@@ -20,62 +20,62 @@ let last_image = null;
 // );
 
 // 等待 DOM 加载完成
-document.addEventListener("DOMContentLoaded", () => {
-  const segBtn = document.querySelector(".btn.btn-outline-secondary");
-  const storyboardBtn = document.querySelector(".btn.btn-outline-info");
-  const generateBtn = document.querySelector(".btn.btn-primary");
-  const crawlBtn = document.getElementById("crawl");
+// document.addEventListener("DOMContentLoaded", () => {
+//   const segBtn = document.querySelector(".btn.btn-outline-secondary");
+//   const storyboardBtn = document.querySelector(".btn.btn-outline-info");
+//   const generateBtn = document.querySelector(".btn.btn-primary");
+//   const crawlBtn = document.getElementById("crawl");
 
-  // 绑定“分段并显示”按钮
-  if (segBtn) {
-    segBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      segmentText();
-    });
-  } else {
-    console.error("未找到 '分段并显示' 按钮");
-  }
+//   // 绑定“分段并显示”按钮
+//   if (segBtn) {
+//     segBtn.addEventListener("click", (event) => {
+//       event.preventDefault();
+//       segmentText();
+//     });
+//   } else {
+//     console.error("未找到 '分段并显示' 按钮");
+//   }
 
-  // 绑定“提取分镜和内容”按钮
-  if (storyboardBtn) {
-    storyboardBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      extractStoryboard();
-    });
-  } else {
-    console.error("未找到 '提取分镜和内容' 按钮");
-  }
+//   // 绑定“提取分镜和内容”按钮
+//   if (storyboardBtn) {
+//     storyboardBtn.addEventListener("click", (event) => {
+//       event.preventDefault();
+//       extractStoryboard();
+//     });
+//   } else {
+//     console.error("未找到 '提取分镜和内容' 按钮");
+//   }
 
-  // 绑定“生成漫画”按钮
-  if (generateBtn) {
-    generateBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      generateComic();
-    });
-  } else {
-    console.error("未找到 '生成漫画' 按钮");
-  }
+//   // 绑定“生成漫画”按钮
+//   if (generateBtn) {
+//     generateBtn.addEventListener("click", (event) => {
+//       event.preventDefault();
+//       generateComic();
+//     });
+//   } else {
+//     console.error("未找到 '生成漫画' 按钮");
+//   }
 
-  // 绑定“开始爬取”按钮
-  if (crawlBtn) {
-    crawlBtn.addEventListener("click", crawl);
-  } else {
-    console.error("未找到 '开始爬取' 按钮");
-  }
+//   // 绑定“开始爬取”按钮
+//   if (crawlBtn) {
+//     crawlBtn.addEventListener("click", crawl);
+//   } else {
+//     console.error("未找到 '开始爬取' 按钮");
+//   }
 
-  // 事件代理：处理动态生成的确认按钮
-  const segmentsList = document.getElementById("segmentsList");
-  if (segmentsList) {
-    segmentsList.addEventListener("click", async (e) => {
-      if (e.target.matches(".confirm-storyboard")) {
-        e.preventDefault();
-        await generateComicFromConfirmed();
-      }
-    });
-  } else {
-    console.error("未找到 segmentsList 元素");
-  }
-});
+//   // 事件代理：处理动态生成的确认按钮
+//   const segmentsList = document.getElementById("segmentsList");
+//   if (segmentsList) {
+//     segmentsList.addEventListener("click", async (e) => {
+//       if (e.target.matches(".confirm-storyboard")) {
+//         e.preventDefault();
+//         await generateComicFromConfirmed();
+//       }
+//     });
+//   } else {
+//     console.error("未找到 segmentsList 元素");
+//   }
+// });
 
 // 分段并显示当前段落（本地分割，不发送请求）
 async function segmentText() {

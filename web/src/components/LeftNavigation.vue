@@ -76,7 +76,7 @@ const handleSelect = (index: string) => {
 
 <style>
 .sidebar {
-  height: 100vh;
+  height: 100%;
   width: auto; /*有点bug*/
   display: flex;
   background-color: var(--el-menu-bg-color, transparent);

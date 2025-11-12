@@ -4,21 +4,23 @@
       <LeftNavigation />
     </aside>
     <main class="home-layout__content">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <KeepAlive>
+          <component :is="Component" />
+        </KeepAlive>
+      </RouterView>
     </main>
   </div>
 </template>
 
 <script setup>
 import LeftNavigation from "../components/LeftNavigation.vue";
-
 </script>
 
 <style scoped>
 .home-layout {
   display: flex; /* 左右排列 */
   height: 100%; /* 视需求设置高度 */
-  
 }
 
 .home-layout__nav {

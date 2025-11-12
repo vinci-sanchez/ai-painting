@@ -16,7 +16,16 @@ export const comicText = ref("");
 
 export function setComicText(value: string) {
   comicText.value = value;
-
 }
 
+export const comicimage = ref<string[]>([]);
 
+export function setComicImage(value: string[]) {
+  comicimage.value = value;
+}
+
+export const comicpage = ref<string[]>([]);
+
+export function setComicPage(value: string[]) {
+  comicpage.value = value;
+}

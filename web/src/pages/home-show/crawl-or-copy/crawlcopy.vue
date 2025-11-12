@@ -84,6 +84,7 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({ name: "crawlcopy" });
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
@@ -150,7 +151,7 @@ async function crawl() {
   try {
     const url = urlInput.value;
     let index = num.value - 1;
-    const response = await fetch(`${config.BAKE_URL}/api/crawl`, {
+    const response = await fetch(`${config.BACK_URL}/api/crawl`, {
       //http://localhost:3000/api/crawl
       method: "POST",
       headers: { "Content-Type": "application/json" },
