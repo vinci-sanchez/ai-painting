@@ -33,4 +33,5 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	h.registerColabRoutes(r)
 	h.registerArkRoutes(r)
 	h.registerCrawlerRoutes(r)
+	h.registerHelloRoutes(r)
 }
