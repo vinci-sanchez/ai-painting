@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
-
 	"comic-proxy/internal/app"
 	"comic-proxy/internal/config"
 	"comic-proxy/internal/logging"
+	"log"
+	"os"
 )
 
 func main() {
@@ -25,8 +25,13 @@ func main() {
 
 	router := app.NewRouter(cfg)
 
-	log.Printf("启动服务器于 :3000")
-	if err := router.Run(":3000"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000" // 本地默认 3000
+	}
+
+	log.Printf("启动服务器于 :%s", port)
+	if err := router.Run(":" + port); err != nil {
 		log.Fatal("服务器运行失败: ", err)
 	}
 }
