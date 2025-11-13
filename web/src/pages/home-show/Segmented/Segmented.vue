@@ -3,13 +3,13 @@
     <el-card class="card card--wide">
       <template #header>
         <div class="card-header">
-          <span>手动</span>
+          <span>调整分段</span>
         </div>
       </template>
       <!-- <p class="text item" style="height: 250px">{{ textParagraph }}</p> -->
       <el-input
         v-model="textParagraph"
-        :autosize="{ minRows: 10, maxRows: 20 }"
+        :autosize="{ minRows: 20, maxRows: 20 }"
         type="textarea"
         placeholder="Please input"
       />
@@ -34,7 +34,7 @@
     <el-card class="card card--narrow">
       <template #header>
         <div class="card-header">
-          <span>自动</span>
+          <span>参数</span>
         </div>
       </template>
 

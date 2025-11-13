@@ -222,6 +222,7 @@ var page_id = 1;
 //////监听
 onMounted(() => {
   console.log("开始监听分镜生成事件");
+  loading.value = true;
   bus.on("storyboard-generated", handleStoryboard);
   bus.on("comic-generated", handleMeta);
 });
