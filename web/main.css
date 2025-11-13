@@ -11,14 +11,14 @@
 }
 
 body {
-  font-family: 'Noto Sans SC', sans-serif; /* 使用适合中文的字体 */
+  font-family: 'Noto Sans SC', sans-serif; /* 使用适合中文的字�?*/
   background-color: var(--background-color);
   color: var(--text-color);
   line-height: 1.6;
 }
 
 .container {
-  max-width: 900px; /* 限制容器宽度以提高可读性 */
+  max-width: 900px; /* 限制容器宽度以提高可读�?*/
 }
 
 /* 卡片样式 */
@@ -28,7 +28,7 @@ body {
   transition: transform 0.2s ease;
 }
 
-/* 悬停时轻微上移 */
+/* 悬停时轻微上�?*/
 /* .card:hover {
   transform: translateY(-5px); 
 } */
@@ -94,10 +94,10 @@ body {
   width: 100%;
   height: auto;
   border-radius: var(--border-radius);
-  object-fit: cover; /* 确保图像比例合适 */
+  object-fit: cover; /* 确保图像比例合�?*/
 }
 
-/* 分段项 */
+/* 分段�?*/
 .segment-item {
   border: 1px solid #ddd;
   padding: 15px;
@@ -115,7 +115,7 @@ body {
   border-radius: 4px;
 }
 
-/* 提示词标签 */
+/* 提示词标�?*/
 .badge {
   font-size: 0.9rem;
   padding: 6px 12px;
@@ -134,12 +134,12 @@ body {
 #segmentsList:empty::before,
 #panels:empty::before,
 #result:empty::before {
-  content: "加载中...";
+  content: "加载�?..";
   color: var(--secondary-color);
   font-style: italic;
 }
 
-/* 响应式设计 */
+/* 响应式设�?*/
 @media (max-width: 576px) {
   .container {
     padding: 15px;
@@ -193,3 +193,67 @@ footer {
     margin-top: 40px;
     padding: 20px 0;
 }
+
+/*循环背景文字*/
+.blackgroundtxt {
+  opacity: 0.7;
+  pointer-events: none;
+  user-select: none;
+  color: #84baea;
+  white-space: nowrap; /* 禁止自动换行 */
+}
+.char {
+  display: inline-block; /* 字符独立显示 */
+  animation: showAndHide 4s forwards; /* 4秒循环动�?*/
+  opacity: 0; /* 初始不可�?*/
+}
+.pause-animation .char {
+  animation-play-state: paused !important;
+}
+@keyframes showAndHide {
+  0% {
+    opacity: 0;
+  } /* 初始不可�?*/
+  20% {
+    opacity: 1;
+  } /* 淡入 */
+  40% {
+    opacity: 1;
+  } /* 保持可见 */
+  60% {
+    opacity: 0;
+  } /* 淡出 */
+  100% {
+    opacity: 0;
+  } /* 保持不可�?*/
+}
+.page-content {
+  position: relative;
+}
+
+#app {
+  position: relative;
+  z-index: 2;
+}
+
+footer {
+  position: relative;
+  z-index: 2;
+}
+
+.bg-text-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.blackgroundtxt {
+  position: absolute;
+}
+
+
+
+
+
+
