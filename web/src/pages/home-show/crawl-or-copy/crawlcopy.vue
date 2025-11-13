@@ -8,7 +8,7 @@
             <div class="card-body">
               <h2 class="card-title text-center mb-4">小说爬取</h2>
               <p class="text-muted text-center">
-                支持从比如 https://www.blqukk.cc/ 爬取小说章节
+                支持从比如 https://www.blqukk.cc/ 爬取小说章节(因为服务器在国外，网站可能会出现404错误限制访问的情况，请酌情使用)
               </p>
               <div class="input-group mb-3">
                 <span class="input-group-text">
