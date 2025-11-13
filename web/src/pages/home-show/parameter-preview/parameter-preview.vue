@@ -144,7 +144,6 @@ import router from "../../../router.js";
 import config from "../../config.json";
 // const TEXT_MODEL = config.TEXT_MODEL;
 // const BACK_URL = config.BACK_URL;
-
 const novel = ref("");
 const loading = ref(false);
 const svg = `

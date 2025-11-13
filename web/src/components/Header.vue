@@ -1,7 +1,7 @@
 <template>
   <header>
     <div id="navigation"></div>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark header-gradient">
       <div class="container">
         <a class="navbar-brand" href="#">Text-to-manga Studio</a>
         <span
@@ -27,17 +27,19 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <router-link to="/"><a class="nav-link">仪表盘</a></router-link>
+              <router-link class="nav-link nav-link--button" to="/"
+                >仪表盘</router-link
+              >
             </li>
             <li class="nav-item">
-              <router-link to="/login">
-                <a class="nav-link">登录</a>
-              </router-link>
+              <router-link class="nav-link nav-link--button" to="/login"
+                >登录</router-link
+              >
             </li>
             <li class="nav-item">
-              <router-link to="/signup">
-                <a class="nav-link">注册</a>
-              </router-link>
+              <router-link class="nav-link nav-link--button" to="/signup" style=""
+                >注册</router-link
+              >
             </li>
           </ul>
         </div>
@@ -46,3 +48,22 @@
   </header>
 </template>
 <script setup></script>
+<style scoped>
+.header-gradient {
+  background: linear-gradient(90deg, #84baea 0%, #a9bbda 55%, #689cf5 100%);
+}
+
+.header-gradient .navbar-brand,
+.header-gradient .nav-link {
+  color: #ffffff;
+}
+
+.header-gradient .nav-link:hover,
+.header-gradient .navbar-brand:hover {
+  color: #d0e6ff;
+}
+
+.nav-link--button {
+  text-decoration: none;
+}
+</style>

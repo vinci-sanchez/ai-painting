@@ -66,8 +66,44 @@
           </section>
         </el-tab-pane>
         <el-tab-pane label="上传文件" name="third">
-          <section id="input-section" class="card mb-5 shadow-lg">
-            <div class="card-body">暂无内容</div>
+          <section class="card mb-5 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title text-center mb-4">TXT 文件上传</h2>
+              <p class="text-muted text-center mb-4">
+                拖动或选择 .txt 小说文件，系统会自动填充内容并同步到分段页面
+              </p>
+              <div
+                class="upload-dropzone"
+                :class="{ 'upload-dropzone--active': isDragging }"
+                @dragover.prevent="handleDragOver"
+                @dragleave.prevent="handleDragLeave"
+                @drop.prevent="handleFileDrop"
+              >
+                <i class="fas fa-file-alt upload-dropzone__icon"></i>
+                <p class="mb-1">将 TXT 文件拖拽到这里</p>
+                <p class="text-muted mb-3">或</p>
+                <button
+                  type="button"
+                  class="btn btn-outline-primary"
+                  @click="triggerFileDialog"
+                >
+                  选择 TXT 文件
+                </button>
+                <p v-if="selectedFileName" class="text-success mt-3">
+                  已选择：{{ selectedFileName }}
+                </p>
+                <p v-if="uploadError" class="text-danger mt-2">
+                  {{ uploadError }}
+                </p>
+              </div>
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept=".txt,text/plain"
+                class="upload-file-input"
+                @change="handleFileChange"
+              />
+            </div>
           </section>
         </el-tab-pane>
         <button
@@ -110,6 +146,10 @@ const router = useRouter();
 const textContent = ref(sharedText.value);
 
 const canNavigate = computed(() => textContent.value.trim().length > 0);
+const isDragging = ref(false);
+const uploadError = ref("");
+const selectedFileName = ref("");
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const goToSegmented = () => {
   if (!canNavigate.value) {
@@ -235,4 +275,100 @@ watch(
     setSharedText(value);
   }
 );
+
+const isTxtFile = (file: File) =>
+  file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt");
+
+const resetFileInput = () => {
+  if (fileInputRef.value) {
+    fileInputRef.value.value = "";
+  }
+};
+
+const processTxtFile = async (file: File) => {
+  uploadError.value = "";
+  if (!isTxtFile(file)) {
+    uploadError.value = "仅支持上传扩展名为 .txt 的纯文本文件";
+    ElMessage.error(uploadError.value);
+    resetFileInput();
+    return;
+  }
+
+  try {
+    const content = await file.text();
+    if (!content.trim()) {
+      uploadError.value = "文件内容为空，请确认文件是否正确";
+      ElMessage.warning(uploadError.value);
+      return;
+    }
+    selectedFileName.value = file.name;
+    textContent.value = content;
+    finishTask(content);
+    ElMessage.success(`已读取 ${file.name}`);
+  } catch (error) {
+    uploadError.value = `文件读取失败: ${(error as Error).message}`;
+    ElMessage.error(uploadError.value);
+  } finally {
+    resetFileInput();
+  }
+};
+
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const [file] = target.files ?? [];
+  if (file) {
+    processTxtFile(file);
+  }
+};
+
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "copy";
+  }
+  isDragging.value = true;
+};
+
+const handleDragLeave = () => {
+  isDragging.value = false;
+};
+
+const handleFileDrop = (event: DragEvent) => {
+  event.preventDefault();
+  const [file] = event.dataTransfer?.files ?? [];
+  if (file) {
+    processTxtFile(file);
+  }
+  isDragging.value = false;
+};
+
+const triggerFileDialog = () => {
+  uploadError.value = "";
+  fileInputRef.value?.click();
+};
 </script>
+
+<style scoped>
+.upload-dropzone {
+  border: 2px dashed #c0c4cc;
+  border-radius: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.upload-dropzone--active {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.upload-dropzone__icon {
+  font-size: 48px;
+  color: #409eff;
+  margin-bottom: 8px;
+}
+
+.upload-file-input {
+  display: none;
+}
+</style>
