@@ -466,7 +466,28 @@
 //   }
 // }
 
-///
+
+///激活render
+async function ping() {
+  try {
+    await fetch("https://ai-painting.onrender.com/");
+    console.log("Ping success");
+  } catch (err) {
+    console.log("Ping failed:", err);
+  }
+}
+
+// 每 10 分钟 ping 一次
+setInterval(ping, 10 * 60 * 1000);
+
+// 页面打开后立即 ping 一次
+ping();
+
+
+
+
+
+///背景文字
 import config from "./config.js";
 let cycle = [true, true, true, true, true, true];
 show_all_bgdtxt();

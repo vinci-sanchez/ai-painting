@@ -227,7 +227,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  loading.value = false;
   bus.off("storyboard-generated", handleStoryboard);
   bus.off("comic-generated", handleMeta);
 });
@@ -237,7 +236,8 @@ const handleStoryboard = (payload: unknown) => {
   scene.value = data.scene ?? "";
   prompt.value = data.prompt ?? "";
   character.value = data.character ?? "";
-  console.log("收到分镜数据:", data);
+  console.log("收到分镜数据:", data); 
+  loading.value = false;
   return data;
 };
 
