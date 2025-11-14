@@ -40,23 +40,32 @@
           class="page-preview"
         >
           <el-image
-            style="width: 100%; min-height: 120px; height: auto"
+            style="
+              width: 400px;
+              min-height: 120px;
+              height: auto;
+              object-fit: contain;
+            "
             :src="showPage.images || url"
             fit="cover"
           />
         </div>
-        <el-button type="primary" plain @click="handlePrevPage">上一章</el-button>
-        <el-button type="primary" plain @click="handleNextPage">下一章</el-button>
+        <el-button type="primary" plain @click="handlePrevPage"
+          >上一章</el-button
+        >
+        <el-button type="primary" plain @click="handleNextPage"
+          >下一章</el-button
+        >
       </el-card>
     </el-main>
   </el-container>
 </template>
 
 <script lang="ts" setup>
-import { ref ,onMounted,onBeforeUnmount} from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import type { ImageProps } from "element-plus";
 import bus from "../eventbus.js";
-import { comicimage,setComicImage } from "../shared-text";
+import { comicimage, setComicImage } from "../shared-text";
 
 type ComicPage = {
   id: number;
@@ -114,33 +123,29 @@ const setPageRef = (el: HTMLElement | null, id: number) => {
   }
 };
 
-const handlePageSelect = (index: string) => {
-  activePageId.value = index;
-  const target = pageRefs.value[index];
-  if (target) {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-};
 //展示漫画
 function Show_comic(payload: unknown) {
   const data = payload as { url: string; page_id: number; title: string };
-  console.log("收到漫画数据:", data);
   const newPage: ComicPage = {
     id: data.page_id,
     title: data.title,
     images: data.url,
   };
   comicPages.value.push(newPage);
-  if (comicPages.value.length === 1) {
-    activePageId.value = newPage.id.toString();
-    showPage.value = newPage;
-  }
+  activePageId.value = newPage.id.toString();
+  showPage.value = newPage;
   loading.value = false;
-  return data;
 }
 
-
-
+const handlePageSelect = (index: string) => {
+  activePageId.value = index;
+  const selected = comicPages.value.find(
+    (page) => page.id.toString() === index
+  );
+  if (selected) {
+    showPage.value = selected;
+  }
+};
 
 ///////上一张
 function handlePrevPage() {

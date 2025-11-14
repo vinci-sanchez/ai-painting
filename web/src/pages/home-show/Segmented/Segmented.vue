@@ -9,7 +9,7 @@
       <!-- <p class="text item" style="height: 250px">{{ textParagraph }}</p> -->
       <el-input
         v-model="textParagraph"
-        :autosize="{ minRows: 20, maxRows: 20 }"
+        :autosize="{ minRows: 15, maxRows: 15 }"
         type="textarea"
         placeholder="Please input"
       />
@@ -298,7 +298,7 @@ async function generateStoryboard(text?: string) {
       {
         role: "system",
         content:
-          "你是一个漫画创作者。将输入文本转换为1个图片的四格漫画，要求含有场景，提示词和人物(若有的话依照人物名称生成符合该人物的服饰，长相，没有就返回null)，输出格式为纯文本，字段按以下格式：scene:...;prompt:...;character:...;字段间用分号分隔，不包含换行符，用中文回答我。",
+          "你是一个漫画创作者。将输入文本转换为1个图片的四格漫画，要求含有场景，提示词，人物对话(格式为谁在什么时候说了什么)和人物长相(若有的话依照人物名称生成符合该人物的服饰，长相，没有就返回null)，输出格式为纯文本，字段按以下格式：scene:...;prompt:...;dialogue:....;character:...;字段间用分号分隔，不包含换行符，用中文回答我。",
       },
       { role: "user", content: text + extraPrompts },
     ],
@@ -337,6 +337,7 @@ async function generateStoryboard(text?: string) {
     const parsedData = {
       scene: "默认场景",
       prompt: "默认提示词",
+      dialogue: "默认对话",
       character: "",
     };
     const comicData = {
@@ -345,21 +346,24 @@ async function generateStoryboard(text?: string) {
       hints: other_hint.value || [],
     };
     const sceneMatch = textContent.match(/scene:([\s\S]*?)(?=;prompt:|$)/);
-    const promptMatch = textContent.match(/prompt:([\s\S]*?)(?=;character:|$)/);
+    const promptMatch = textContent.match(/prompt:([\s\S]*?)(?=;dialogue:|$)/);
+    const dialogueMatch = textContent.match(/dialogue:([\s\S]*?)(?=;character:|$)/);
     const characterMatch = textContent.match(/character:([\s\S]*?)(?=;|$)/);
 
     console.log("解析结果:", {
       scene: sceneMatch ? sceneMatch[1] : null,
       prompt: promptMatch ? promptMatch[1] : null,
       character: characterMatch ? characterMatch[1] : null,
+      dialogue: dialogueMatch ? dialogueMatch[1] : null,
     });
     if (sceneMatch && sceneMatch[1]) {
       parsedData.scene = sceneMatch[1].trim();
     }
     if (promptMatch && promptMatch[1]) {
-      parsedData.prompt =
-        promptMatch[1].trim() +
-        "Output in a style similar to that of Japanese anime";
+      parsedData.prompt = promptMatch[1].trim();
+    }
+    if (dialogueMatch && dialogueMatch[1]) {
+      parsedData.dialogue = dialogueMatch[1].trim();
     }
     if (characterMatch && characterMatch[1] && characterMatch[1] !== "null") {
       parsedData.character = characterMatch[1].trim();

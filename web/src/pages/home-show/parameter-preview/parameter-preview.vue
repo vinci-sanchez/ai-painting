@@ -113,6 +113,11 @@
         v-model="prompt"
         :autosize="{ minRows: 10, maxRows: 20 }"
       ></el-input>
+         <h6>对白</h6>
+      <el-input
+        v-model="dialogue"
+        :autosize="{ minRows: 10, maxRows: 20 }"
+      ></el-input>
       <h6>人物</h6>
       <el-input
         v-model="character"
@@ -198,6 +203,7 @@ const promptSegments = computed(() =>
 /////分镜接受
 const scene = ref("");
 const prompt = ref("");
+const dialogue = ref("");
 const character = ref("");
 const style = ref("");
 const color = ref("");
@@ -205,6 +211,7 @@ const customTags = ref<string[]>([]);
 type StoryboardPayload = {
   scene?: string;
   prompt?: string;
+  dialogue?:string;
   character?: string;
 };
 
@@ -235,6 +242,7 @@ const handleStoryboard = (payload: unknown) => {
   const data = (payload as StoryboardPayload) ?? {};
   scene.value = data.scene ?? "";
   prompt.value = data.prompt ?? "";
+  dialogue.value = data.dialogue ?? "";
   character.value = data.character ?? "";
   console.log("收到分镜数据:", data); 
   loading.value = false;
@@ -283,6 +291,7 @@ async function goGenerateComic() {
     StoryboardPayload: {
       scene: scene.value,
       prompt: prompt.value,
+      dialogue: dialogue.value,
       character: character.value,
     },
     StoryboardMetaPayload: {
@@ -324,7 +333,7 @@ async function generateImage(ComicData: ComicData) {
     ${color.value}色调，
     ${customTags.value.join(",")}，
     创作一个包含场景:${scene.value}，
-    剧情为${prompt.value}，人物:${character.value}的四格漫画`,
+    剧情为${prompt.value}，人物:${character.value},人物对白:${dialogue.value}的四格漫画`,
     image: `data:image/${last_image_type};base64,${last_image}`,
     role: "user",
   };
