@@ -13,8 +13,12 @@
       @select="handleSelect"
       style="height: 100vh"
     >
+      <el-menu-item index="home-welcome">
+        <el-icon><Compass /></el-icon>
+        <template #title>仪表盘</template>
+      </el-menu-item>
       <el-menu-item index="home-crawlcopy">
-        <el-icon><location /></el-icon>
+        <el-icon><DocumentCopy /></el-icon>
         <template #title>爬取或上传</template>
       </el-menu-item>
       <el-menu-item index="home-segmented">
@@ -23,10 +27,10 @@
       </el-menu-item>
       <el-menu-item index="home-parameter-preview">
         <el-icon><document /></el-icon>
-        <template #title>分镜预览</template>
+        <template #title>参数预览</template>
       </el-menu-item>
       <el-menu-item index="home-comic">
-        <el-icon><setting /></el-icon>
+        <el-icon><Collection /></el-icon>
         <template #title>漫画</template>
       </el-menu-item>
     </el-menu>
@@ -40,6 +44,7 @@ import {
   Menu as IconMenu,
   Location,
   Setting,
+  HomeFilled,
 } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -63,7 +68,7 @@ const handleSidebarClick = (event: MouseEvent) => {
 
 const activeMenu = computed(() => {
   const name = route.name;
-  return typeof name === "string" ? name : "home-crawlcopy";
+  return typeof name === "string" ? name : "home-welcome";
 });
 
 const handleSelect = (index: string) => {

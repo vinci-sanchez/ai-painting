@@ -11,7 +11,7 @@
             user-select: none;
             color: #d0bcff;
           "
-          >文生画</span
+          >文生漫实验室</span
         >
         <button
           class="navbar-toggler"
@@ -27,9 +27,12 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <router-link class="nav-link nav-link--button" to="/"
-                >仪表盘</router-link
+              <router-link
+                class="nav-link nav-link--button"
+                :to="{ name: 'home-welcome' }"
               >
+                仪表盘
+              </router-link>
             </li>
             <li class="nav-item">
               <router-link class="nav-link nav-link--button" to="/login"

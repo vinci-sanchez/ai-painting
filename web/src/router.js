@@ -6,13 +6,15 @@ import CrawlCopy from "./pages/home-show/crawl-or-copy/crawlcopy.vue";
 import Segmented from "./pages/home-show/Segmented/Segmented.vue";
 import ParameterPreview from "./pages/home-show/parameter-preview/parameter-preview.vue";
 import Comic from "./pages/home-show/comic/comic.vue";
+import Welcome from "./pages/home-show/home/welcome.vue";
 
 const routes = [
   {
     path: "/",
     component: home,
-    redirect: { name: "home-crawlcopy" },
+    redirect: { name: "home-welcome" },
     children: [
+      { path: "welcome", name: "home-welcome", component: Welcome },
       { path: "crawlcopy", name: "home-crawlcopy", component: CrawlCopy },
       { path: "segmented", name: "home-segmented", component: Segmented },
       {

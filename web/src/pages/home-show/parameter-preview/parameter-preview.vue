@@ -25,7 +25,7 @@
         <template #label>
           <div class="cell-item">
             <el-icon :style="iconStyle">
-              <iphone />
+              <Clock />
             </el-icon>
             时间
           </div>
@@ -49,7 +49,7 @@
         <template #label>
           <div class="cell-item">
             <el-icon :style="iconStyle">
-              <tickets />
+             <CollectionTag />
             </el-icon>
             自定义提示词
           </div>

@@ -2,10 +2,10 @@
   <div class="welcome">
     <section class="welcome__hero card shadow-sm">
       <div class="welcome__hero-body">
-        <p class="welcome__eyebrow">AI 漫画工作台</p>
-        <h1 class="welcome__title">欢迎回来！</h1>
+        <p class="welcome__eyebrow">文生漫</p>
+        <h1 class="welcome__title">欢迎光临！</h1>
         <p class="welcome__subtitle">
-          在这里爬取/整理小说、配置参数并生成专属漫画。先从左侧导航或下方快捷操作开始吧。
+          在这里爬取/整理小说、配置参数并生成专属漫画。
         </p>
         <div class="welcome__actions">
           <el-button type="primary" @click="goTo('home-crawlcopy')">
@@ -34,7 +34,7 @@
       </el-col>
     </el-row>
 
-    <el-card class="mt-4" shadow="never">
+    <!-- <el-card class="mt-4" shadow="never">
       <template #header>
         <div class="welcome__section-header">
           <h3>快速上手流程</h3>
@@ -47,7 +47,7 @@
           <p>{{ step.desc }}</p>
         </li>
       </ol>
-    </el-card>
+    </el-card> -->
   </div>
 </template>
 
