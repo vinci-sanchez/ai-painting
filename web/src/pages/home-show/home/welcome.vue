@@ -11,12 +11,10 @@
           <el-button type="primary" @click="goTo('home-crawlcopy')">
             开始准备文稿
           </el-button>
-          <el-button plain @click="goTo('home-parameter-preview')">
-            查看参数配置
-          </el-button>
+
         </div>
       </div>
-      <img class="welcome__illustration" src="/img/Text-to-manga.svg" alt="text to manga" />
+      <!-- <img class="welcome__illustration" src="/img/Text-to-manga.svg" alt="text to manga" /> -->
     </section>
 
     <el-row :gutter="20" class="mt-4">
@@ -33,21 +31,6 @@
         </el-card>
       </el-col>
     </el-row>
-
-    <!-- <el-card class="mt-4" shadow="never">
-      <template #header>
-        <div class="welcome__section-header">
-          <h3>快速上手流程</h3>
-          <span class="text-muted">3 步完成一次漫画生成</span>
-        </div>
-      </template>
-      <ol class="welcome__steps">
-        <li v-for="step in steps" :key="step.title">
-          <h4>{{ step.title }}</h4>
-          <p>{{ step.desc }}</p>
-        </li>
-      </ol>
-    </el-card> -->
   </div>
 </template>
 

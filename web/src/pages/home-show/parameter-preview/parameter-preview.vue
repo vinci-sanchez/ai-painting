@@ -49,7 +49,7 @@
         <template #label>
           <div class="cell-item">
             <el-icon :style="iconStyle">
-             <CollectionTag />
+              <CollectionTag />
             </el-icon>
             自定义提示词
           </div>
@@ -69,6 +69,22 @@
       </el-descriptions-item>
     </el-descriptions>
 
+    <!-- 其他配置 -->
+    <el-button type="primary" @click="ConfigurationClick">其他配置</el-button>
+    <el-dialog v-model="Configuration" title=" 配置(不懂默认就行)" width="500">
+      <el-form label-position="top" label-width="100px">
+        <el-form-item label="BASE_URL">
+          <el-input v-model="UPDATE_BASE_URL" />
+        </el-form-item>
+        <el-form-item label="接入点模型ID">
+         <el-input v-model="UPDATE_IMAGE_MODEL" />  
+        </el-form-item>
+        <el-form-item label="API_KEY">
+        <el-input v-model="UPDATE_API_KEY" placeholder="如果更改,此项为必填项"  /> 
+        </el-form-item>
+      </el-form>
+    </el-dialog>
+
     <div
       v-loading="loading"
       element-loading-text="巴拉巴拉生成中..."
@@ -85,9 +101,8 @@
         :size="size"
         :style="blockMargin"
       >
-        <template #extra>
-          <el-button type="primary">Operation</el-button>
-        </template>
+        <template #extra> </template>
+
         <el-descriptions-item label="项目名称" :span="3">
           {{ novel }}
         </el-descriptions-item>
@@ -113,7 +128,7 @@
         v-model="prompt"
         :autosize="{ minRows: 10, maxRows: 20 }"
       ></el-input>
-         <h6>对白</h6>
+      <h6>对白</h6>
       <el-input
         v-model="dialogue"
         :autosize="{ minRows: 10, maxRows: 20 }"
@@ -133,7 +148,7 @@
 </template>
 <script lang="ts" setup>
 defineOptions({ name: "parameter-preview" });
-import { computed, ref, onMounted, onBeforeUnmount, toRaw } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount, toRaw, watch } from "vue";
 import { ElMessage } from "element-plus";
 import bus from "../eventbus.js";
 import {
@@ -143,12 +158,19 @@ import {
   Tickets,
   User,
 } from "@element-plus/icons-vue";
-import { setComicText, comicText } from "../shared-text";
-import { setComicImage, comicimage } from "../shared-text";
+import {
+  setComicText,
+  comicText,
+  setComicImage,
+  comicimage,
+  parameterDraft,
+  setParameterDraft,
+} from "../shared-text";
+import type { ParameterDraft as ComicParameterDraft } from "../shared-text";
 import router from "../../../router.js";
 import config from "../../config.json";
-// const TEXT_MODEL = config.TEXT_MODEL;
-// const BACK_URL = config.BACK_URL;
+const BACK_URL = config.BACK_URL;
+const API_BASE_URL = config.BASE_URL;
 const novel = ref("");
 const loading = ref(false);
 const svg = `
@@ -199,7 +221,10 @@ const promptSegments = computed(() =>
     .map((item) => item.trim())
     .filter(Boolean)
 );
-
+/////自定义配置
+const UPDATE_IMAGE_MODEL = ref(config.IMAGE_MODEL);
+const UPDATE_BASE_URL = ref(API_BASE_URL);
+const UPDATE_API_KEY = ref(config.API_KEY);
 /////分镜接受
 const scene = ref("");
 const prompt = ref("");
@@ -208,10 +233,49 @@ const character = ref("");
 const style = ref("");
 const color = ref("");
 const customTags = ref<string[]>([]);
+
+const applyParameterDraft = (draft: ComicParameterDraft) => {
+  if (draft.title !== undefined) {
+    novel.value = draft.title ?? "";
+  }
+  if (draft.scene !== undefined) {
+    scene.value = draft.scene ?? "";
+  }
+  if (draft.prompt !== undefined) {
+    prompt.value = draft.prompt ?? "";
+  }
+  if (draft.dialogue !== undefined) {
+    dialogue.value = draft.dialogue ?? "";
+  }
+  if (draft.character !== undefined) {
+    character.value = draft.character ?? "";
+  }
+  if (draft.style !== undefined) {
+    style.value = draft.style ?? "";
+  }
+  if (draft.color !== undefined) {
+    color.value = draft.color ?? "";
+  }
+  if (draft.customTags !== undefined) {
+    customTags.value = [...draft.customTags];
+  }
+  loading.value = false;
+};
+
+watch(
+  () => parameterDraft.value,
+  (value) => {
+    if (value) {
+      applyParameterDraft(value);
+      setParameterDraft(null);
+    }
+  },
+  { immediate: true }
+);
 type StoryboardPayload = {
   scene?: string;
   prompt?: string;
-  dialogue?:string;
+  dialogue?: string;
   character?: string;
 };
 
@@ -225,6 +289,17 @@ type ComicData = {
   StoryboardMetaPayload: StoryboardMetaPayload;
 };
 var page_id = 1;
+
+const buildParametersForPage = (): ComicParameterDraft => ({
+  title: novel.value,
+  scene: scene.value,
+  prompt: prompt.value,
+  dialogue: dialogue.value,
+  character: character.value,
+  style: style.value,
+  color: color.value,
+  customTags: [...customTags.value],
+});
 //////监听
 onMounted(() => {
   console.log("开始监听分镜生成事件");
@@ -244,7 +319,7 @@ const handleStoryboard = (payload: unknown) => {
   prompt.value = data.prompt ?? "";
   dialogue.value = data.dialogue ?? "";
   character.value = data.character ?? "";
-  console.log("收到分镜数据:", data); 
+  console.log("收到分镜数据:", data);
   loading.value = false;
   return data;
 };
@@ -257,7 +332,11 @@ const handleMeta = (payload: unknown) => {
   console.log("收到分镜元数据:", data);
   return data;
 };
-
+//////////////////////配置弹窗
+const Configuration = ref(false);
+const ConfigurationClick = async () => {
+  Configuration.value = true;
+};
 //////////////////////////////////////url转base64
 const last_image = "";
 const last_image_type = "";
@@ -287,6 +366,7 @@ function urlToBase64(url: string): Promise<string> {
 
 //转到生成漫画
 async function goGenerateComic() {
+  const parameters = buildParametersForPage();
   const comicData: ComicData = {
     StoryboardPayload: {
       scene: scene.value,
@@ -309,6 +389,7 @@ async function goGenerateComic() {
       page_id: page_id++,
       title: novel.value || "未命名章节",
       url: result.image_url,
+      parameters,
     };
     console.log("图像生成结果:", result);
     setComicImage([novel.value, result.image_url]);
@@ -327,18 +408,24 @@ async function goGenerateComic() {
 async function generateImage(ComicData: ComicData) {
   console.log("发送 /api/image 请求");
   console.log("图像生成输入数据:", ComicData);
+  const targetBaseUrl = (UPDATE_BASE_URL.value || "").trim();
   const requestBody = {
-    model: "ep-20251021153509-xh86n",
+    apiKey: (UPDATE_API_KEY.value || "").trim(),
+    baseUrl: targetBaseUrl,
+    model: UPDATE_IMAGE_MODEL.value,
     prompt: `以${style.value}风格，
     ${color.value}色调，
     ${customTags.value.join(",")}，
     创作一个包含场景:${scene.value}，
-    剧情为${prompt.value}，人物:${character.value},人物对白:${dialogue.value}的四格漫画`,
+    剧情为${prompt.value}，人物:${character.value},人物对白:${
+      dialogue.value
+    }的四格漫画，若有颜色形容词则必须按照${style.value}风格，
+    ${color.value}色调来绘制，(比如若色调为黑白则必须为黑白，不可有多余的色彩)`,
     image: `data:image/${last_image_type};base64,${last_image}`,
     role: "user",
   };
   console.log("请求体内容:", requestBody);
-  const response: Response = await fetch(`${config.BACK_URL}/api/image`, {
+  const response: Response = await fetch(`${BACK_URL}/api/image`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(requestBody),

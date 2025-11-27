@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"comic-proxy/internal/config"
@@ -34,4 +36,12 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	h.registerArkRoutes(r)
 	h.registerCrawlerRoutes(r)
 	h.registerHelloRoutes(r)
+}
+
+// resolveAPIKey 优先使用请求体中的 apiKey，若为空则回退到服务端配置
+func (h *Handler) resolveAPIKey(candidate string) string {
+	if trimmed := strings.TrimSpace(candidate); trimmed != "" {
+		return trimmed
+	}
+	return strings.TrimSpace(h.apiKey)
 }

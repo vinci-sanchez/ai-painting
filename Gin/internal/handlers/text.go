@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,12 +29,49 @@ func (h *Handler) handleTextGeneration(c *gin.Context) {
 	}
 	log.Printf("接收到请求体: %s", body.String())
 
+	var payload map[string]interface{}
+	if err := json.Unmarshal(body.Bytes(), &payload); err != nil {
+		log.Printf("解析请求体失�? %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("解析请求体失�? %v", err)})
+		return
+	}
+
+	var providedKey string
+	var providedBaseURL string
+	if rawKey, ok := payload["apiKey"].(string); ok {
+		providedKey = rawKey
+		delete(payload, "apiKey")
+	}
+	if rawBaseURL, ok := payload["baseUrl"].(string); ok {
+		providedBaseURL = rawBaseURL
+		delete(payload, "baseUrl")
+	}
+
+	cleanBody, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("重编码请求体失�? %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("重编码请求体失�? %v", err)})
+		return
+	}
+
+	apiKey := h.resolveAPIKey(providedKey)
+	if apiKey == "" {
+		log.Printf("缺少可用的 API_KEY")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "缺少可用的 API_KEY"})
+		return
+	}
+
+	targetBaseURL := h.baseURL
+	if trimmed := strings.TrimSpace(providedBaseURL); trimmed != "" {
+		targetBaseURL = trimmed
+	}
+
 	client := resty.New()
 	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+h.apiKey).
+		SetHeader("Authorization", "Bearer "+apiKey).
 		SetHeader("Content-Type", "application/json").
-		SetBody(body.Bytes()).
-		Post(h.baseURL + "/chat/completions")
+		SetBody(cleanBody).
+		Post(targetBaseURL + "/chat/completions")
 
 	if err != nil {
 		log.Printf("调用外部 API 失败: %v", err)

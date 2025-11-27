@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,8 @@ func (h *Handler) handleArkImage(c *gin.Context) {
 		Role       string `json:"role"`
 		Prompt     string `json:"prompt"`
 		Storyboard string `json:"storyboard"`
+		APIKey     string `json:"apiKey"`
+		BaseURL    string `json:"baseUrl"`
 	}
 	if err := json.Unmarshal(body.Bytes(), &requestData); err != nil {
 		log.Printf("解析请求体失败: %v", err)
@@ -60,12 +63,24 @@ func (h *Handler) handleArkImage(c *gin.Context) {
 	}
 	log.Printf("发送到火山方舟的数据: %s", string(arkDataBytes))
 
+	apiKey := h.resolveAPIKey(requestData.APIKey)
+	if apiKey == "" {
+		log.Printf("缺少可用的 API_KEY")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "缺少可用的 API_KEY"})
+		return
+	}
+
+	targetBaseURL := strings.TrimSpace(requestData.BaseURL)
+	if targetBaseURL == "" {
+		targetBaseURL = h.baseURL
+	}
+
 	client := resty.New()
 	resp, err := client.R().
-		SetHeader("Authorization", "Bearer "+h.apiKey).
+		SetHeader("Authorization", "Bearer "+apiKey).
 		SetHeader("Content-Type", "application/json").
 		SetBody(arkDataBytes).
-		Post(h.baseURL + "/images/generations")
+		Post(targetBaseURL + "/images/generations")
 
 	if err != nil {
 		log.Printf("调用火山方舟 API 失败: %v", err)

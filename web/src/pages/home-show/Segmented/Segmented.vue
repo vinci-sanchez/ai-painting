@@ -100,6 +100,7 @@ import { te } from "element-plus/es/locale/index.mjs";
 import router from "../../../router.js";
 const TEXT_MODEL = config.TEXT_MODEL;
 const BACK_URL = config.BACK_URL;
+const API_KEY = config.API_KEY;
 type TaskInfo = {
   status?: string;
   time?: string;
@@ -120,7 +121,7 @@ const segments = ref<string[]>([]);
 const currentIndex = ref(0);
 
 const other_hint = ref<string[]>();
-const color = ref("黑白");
+const color = ref("彩绘");
 const style = ref("日式漫画");
 
 const style_options = [
@@ -131,10 +132,10 @@ const style_options = [
   { value: "线描", label: "线描" },
 ];
 const color_options = [
-  { value: "黑白", label: "黑白" },
+  { value: "彩绘", label: "彩绘" },
   { value: "暖色", label: "暖色" },
   { value: "冷色", label: "冷色" },
-  { value: "水彩", label: "水彩" },
+  { value: "黑白", label: "黑白" },
 ];
 
 function showSegment(index: number) {
@@ -293,12 +294,12 @@ async function generateStoryboard(text?: string) {
   const extraPrompts =
     prompts.length > 0 ? `, 附加提示词: ${prompts.join(", ")}` : "";
   const requestBody = {
+    apiKey: API_KEY,
     model: TEXT_MODEL,
     messages: [
       {
         role: "system",
-        content:
-          "你是一个漫画创作者。将输入文本转换为1个图片的四格漫画，要求含有场景，提示词，人物对话(格式为谁在什么时候说了什么)和人物长相(若有的话依照人物名称生成符合该人物的服饰，长相，没有就返回null)，输出格式为纯文本，字段按以下格式：scene:...;prompt:...;dialogue:....;character:...;字段间用分号分隔，不包含换行符，用中文回答我。",
+        content: `你是一个漫画创作者。将输入文本转换为1个图片的四格漫画,要求含有场景,提示词,人物对话(格式为谁在什么时候说了什么)和人物长相(若有的话依照人物名称生成符合该人物的服饰,长相,没有就返回null);若有颜色则必须符合风格：${style.value},色调：${color.value};输出格式为纯文本,字段按以下格式:scene:...;prompt:...;dialogue:....;character:...;字段间用分号分隔，不包含换行符，用中文回答我。`,
       },
       { role: "user", content: text + extraPrompts },
     ],
@@ -347,7 +348,9 @@ async function generateStoryboard(text?: string) {
     };
     const sceneMatch = textContent.match(/scene:([\s\S]*?)(?=;prompt:|$)/);
     const promptMatch = textContent.match(/prompt:([\s\S]*?)(?=;dialogue:|$)/);
-    const dialogueMatch = textContent.match(/dialogue:([\s\S]*?)(?=;character:|$)/);
+    const dialogueMatch = textContent.match(
+      /dialogue:([\s\S]*?)(?=;character:|$)/
+    );
     const characterMatch = textContent.match(/character:([\s\S]*?)(?=;|$)/);
 
     console.log("解析结果:", {

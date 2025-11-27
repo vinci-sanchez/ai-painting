@@ -29,7 +29,56 @@
 
     <el-main class="comic-content">
       <el-card>
-        <p class="page-title">{{ showPage.title }}</p>
+        <span class="page-title">{{ showPage.title }}</span>
+        <div class="comic-right">
+          <span>觉得不错？</span>
+          <el-button type="primary" plain @click="handleShareClick">
+            <el-icon><Share /></el-icon>
+          </el-button>
+        </div>
+        <!-- 分享面板 -->
+        <el-dialog v-model="SharePanel" title=" 分享" width="500">
+          <!-- 二维码分享 -->
+          <div class="share-qr">
+            <span class="share-section-title">生成二维码</span>
+            <div v-if="Sharecomic" class="share-qr-preview">
+              <img
+                :src="Sharecomic"
+                alt="二维码..."
+                style="width: 200px; min-height: 120px"
+              />
+              <el-button type="primary" link @click="saveShareQr">
+                保存二维码
+              </el-button>
+            </div>
+            <span v-else-if="SharecomicLoading">Generating QR code...</span>
+            <el-button v-else type="primary" link @click="generateShareComic">Retry</el-button>
+          </div>
+          <!-- 保存至本地 -->
+          <div class="share-save">
+            <div>
+              <div class="share-section-title">保存至本地</div>
+              <div class="share-section-desc">保存当前显示的漫画图片</div>
+            </div>
+            <el-button
+              type="primary"
+              :loading="saveComicLoading"
+              :disabled="!currentComicImage"
+              @click="saveCurrentComic"
+            >
+              保存图片
+            </el-button>
+          </div>
+          <template #footer>
+            <div class="dialog-footer">
+              <!-- <el-button @click="SharePanel = false">关闭</el-button>
+              <el-button type="primary" @click="SharePanel = false">
+                Confirm
+              </el-button> -->
+            </div>
+          </template>
+        </el-dialog>
+        <!-- 漫画面板 -->
         <div
           v-loading="loading"
           element-loading-text="巴拉巴拉生成中..."
@@ -50,11 +99,17 @@
             fit="cover"
           />
         </div>
-        <el-button type="primary" plain @click="handlePrevPage"
-          >上一章</el-button
-        >
-        <el-button type="primary" plain @click="handleNextPage"
-          >下一章</el-button
+
+        <span>不是喜欢的类型？-></span>
+        <el-button type="primary" plain @click="ParameterModify"
+          >修改参数</el-button
+        ><span class="comic-right">
+          <el-button type="primary" plain @click="handlePrevPage"
+            >上一章</el-button
+          >
+          <el-button type="primary" plain @click="handleNextPage"
+            >下一章</el-button
+          ></span
         >
       </el-card>
     </el-main>
@@ -62,15 +117,26 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
+import QRCode from "qrcode";
 import type { ImageProps } from "element-plus";
+import { ElMessage } from "element-plus";
 import bus from "../eventbus.js";
-import { comicimage, setComicImage } from "../shared-text";
+import { comicimage, setComicImage, setParameterDraft } from "../shared-text";
+import type { ParameterDraft } from "../shared-text";
+import router from "../../../router.js";
 
 type ComicPage = {
   id: number;
   title: string;
   images?: string;
+  parameters?: ParameterDraft;
+};
+type ComicPayload = {
+  url: string;
+  page_id: number;
+  title: string;
+  parameters?: ParameterDraft;
 };
 onMounted(() => {
   console.log("开始监听漫画生成事件");
@@ -88,6 +154,35 @@ const showPage = ref<ComicPage>({
   title: "示例漫画页",
   images: "<img src='https://example.com/comic1.jpg' />",
 });
+const SharePanel = ref(false);
+const Sharecomic = ref("");
+const SharecomicLoading = ref(false);
+const saveComicLoading = ref(false);
+const currentComicImage = computed(() => showPage.value.images || "");
+
+const handleShareClick = async () => {
+  SharePanel.value = true;
+  Sharecomic.value = "";
+  await generateShareComic();
+};
+
+const generateShareComic = async () => {
+  if (SharecomicLoading.value) return;
+  const targetUrl = currentComicImage.value;
+  if (!targetUrl) {
+    Sharecomic.value = "";
+    return;
+  }
+  try {
+    SharecomicLoading.value = true;
+    Sharecomic.value = await makeQr(targetUrl);
+  } catch (error) {
+    console.error("二维码生成失败", error);
+    Sharecomic.value = "";
+  } finally {
+    SharecomicLoading.value = false;
+  }
+};
 const svg = `
         <path class="path" d="
           M 30 15
@@ -125,11 +220,19 @@ const setPageRef = (el: HTMLElement | null, id: number) => {
 
 //展示漫画
 function Show_comic(payload: unknown) {
-  const data = payload as { url: string; page_id: number; title: string };
+  const data = payload as ComicPayload;
   const newPage: ComicPage = {
     id: data.page_id,
     title: data.title,
     images: data.url,
+    parameters: data.parameters
+      ? {
+          ...data.parameters,
+          customTags: data.parameters.customTags
+            ? [...data.parameters.customTags]
+            : [],
+        }
+      : undefined,
   };
   comicPages.value.push(newPage);
   activePageId.value = newPage.id.toString();
@@ -146,7 +249,31 @@ const handlePageSelect = (index: string) => {
     showPage.value = selected;
   }
 };
-
+///////修改参数
+function ParameterModify() {
+  if (!comicPages.value.length) {
+    router.push({ name: "home-parameter-preview" });
+    return;
+  }
+  const currentPage = showPage.value;
+  if (!currentPage) {
+    router.push({ name: "home-parameter-preview" });
+    return;
+  }
+  const parameters = currentPage.parameters;
+  if (parameters) {
+    setParameterDraft({
+      ...parameters,
+      title: currentPage.title,
+      customTags: parameters.customTags ? [...parameters.customTags] : [],
+    });
+  } else {
+    setParameterDraft({
+      title: currentPage.title,
+    });
+  }
+  router.push({ name: "home-parameter-preview" });
+}
 ///////上一张
 function handlePrevPage() {
   const currentIndex = comicPages.value.findIndex(
@@ -169,11 +296,66 @@ function handleNextPage() {
     showPage.value = nextPage;
   }
 }
+///////二维码生成
+async function makeQr(url: string) {
+  const dataUrl = await QRCode.toDataURL(url, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    width: 320,
+  });
+  return dataUrl; // base64 png，可直接 <img src=...>
+}
+
+const saveCurrentComic = () => {
+  const imageSrc = currentComicImage.value;
+  if (!imageSrc) {
+    ElMessage.warning("当前没有可保存的漫画图片");
+    return;
+  }
+  try {
+    saveComicLoading.value = true;
+    const title = (showPage.value.title || "comic").replace(/\s+/g, "_");
+    const link = document.createElement("a");
+    link.href = imageSrc;
+    link.download = `${title}_${showPage.value.id || "page"}.png`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("保存漫画失败", error);
+    ElMessage.error("保存失败，请稍后重试");
+  } finally {
+    saveComicLoading.value = false;
+  }
+};
+
+const saveShareQr = () => {
+  if (!Sharecomic.value) {
+    ElMessage.warning("当前没有可保存的二维码");
+    return;
+  }
+  const link = document.createElement("a");
+  const title = (showPage.value.title || "comic").replace(/\s+/g, "_");
+  link.href = Sharecomic.value;
+  link.download = `${title}_qr.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 </script>
 
 <style scoped>
 .comic-layout {
   min-height: 400px;
+}
+
+.comic-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 改成 flex-start 就是靠左 */
+  gap: 8px;
 }
 
 .comic-sidebar {
@@ -232,5 +414,37 @@ function handleNextPage() {
   color: var(--el-text-color-secondary);
   font-size: 14px;
   margin-bottom: 20px;
+}
+
+.share-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-qr-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.share-save {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.share-section-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+.share-section-desc {
+  font-size: 12px;
+  color: #909399;
 }
 </style>
