@@ -7,11 +7,12 @@
     <el-menu
       :default-active="activeMenu"
       class="el-menu-vertical-demo sidebar-menu"
+      :mode="menuMode"
       :collapse="isCollapse"
       @open="handleOpen"
       @close="handleClose"
       @select="handleSelect"
-      style="height: 100vh"
+      style="height: 100%"
     >
       <el-menu-item index="home-welcome">
         <el-icon><Compass /></el-icon>
@@ -52,6 +53,7 @@ const router = useRouter();
 const route = useRoute();
 
 const isCollapse = ref(true);
+const menuMode = computed<"horizontal" | "vertical">(() => "vertical");
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath);
 };
@@ -86,10 +88,14 @@ const handleSelect = (index: string) => {
   display: flex;
   background-color: var(--el-menu-bg-color, transparent);
   transition: width 0.2s ease;
+  padding: 8px;
 }
 
 .sidebar-menu {
   flex: 0 0 auto;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(20, 30, 68, 0.08);
+  overflow: hidden;
 }
 
 .el-menu-vertical-demo:not(.el-menu--collapse) {

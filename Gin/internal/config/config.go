@@ -13,14 +13,15 @@ const (
 	defaultColabEndpoint = "https://articular-proportionable-alverta.ngrok-free.dev/"
 )
 
-// Config 保存应用运行所需的配置信息。
+// Config 保存应用运行所需的配置信息
 type Config struct {
 	APIKey        string
 	BaseURL       string
 	ColabEndpoint string
+	DatabaseURL   string
 }
 
-// Load 从环境变量加载配置，同时保留与旧程序一致的默认行为。
+// Load 从环境变量加载配置，同时保留与旧程序一致的默认行为
 func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("警告：未找到 .env 文件，使用默认配置: %v", err)
@@ -36,9 +37,16 @@ func Load() (*Config, error) {
 		colabEndpoint = defaultColabEndpoint
 	}
 
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL 未设置，请配置 Render PostgreSQL 连接串")
+	}
+
 	return &Config{
 		APIKey:        apiKey,
 		BaseURL:       defaultBaseURL,
 		ColabEndpoint: colabEndpoint,
+		DatabaseURL:   databaseURL,
 	}, nil
 }
+

@@ -7,6 +7,7 @@ import Segmented from "./pages/home-show/Segmented/Segmented.vue";
 import ParameterPreview from "./pages/home-show/parameter-preview/parameter-preview.vue";
 import Comic from "./pages/home-show/comic/comic.vue";
 import Welcome from "./pages/home-show/home/welcome.vue";
+import ReadBook from "./pages/home-show/11/ReadBook.vue";
 
 const routes = [
   {
@@ -23,6 +24,7 @@ const routes = [
         component: ParameterPreview,
       },
       { path: "comic", name: "home-comic", component: Comic },
+      { path: "11", name: "home-readbook", component: ReadBook },
     ],
   },
   { path: "/login", component: login },

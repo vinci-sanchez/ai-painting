@@ -38,39 +38,14 @@
                 show-password
               />
             </el-form-item>
-            <el-form-item label="验证码" prop="captcha">
-              <el-input
-                v-model="accountForm.captcha"
-                placeholder="请输入图形验证码"
-                maxlength="8"
-              >
-                <template #suffix>
-                  <el-button
-                    link
-                    type="primary"
-                    :loading="captchaLoading"
-                    @click="fetchCaptcha"
-                  >
-                    获取验证码
-                  </el-button>
-                </template>
-              </el-input>
-              <el-tag
-                v-if="captchaValue"
-                type="success"
-                size="small"
-                class="inline-tag"
-              >
-                {{ captchaValue }}
-              </el-tag>
-            </el-form-item>
             <div class="form-footer">
-              <el-checkbox v-model="accountForm.agree">
+              <el-checkbox class="form-agreement" v-model="accountForm.agree">
                 我已阅读并同意《用户使用手册》
               </el-checkbox>
               <el-button
                 type="primary"
                 :loading="accountLoading"
+                class="form-submit"
                 @click="handleAccountSignup"
               >
                 注册
@@ -122,12 +97,13 @@
               </el-input>
             </el-form-item>
             <div class="form-footer">
-              <el-checkbox v-model="phoneForm.agree">
+              <el-checkbox class="form-agreement" v-model="phoneForm.agree">
                 我已阅读并同意《用户使用手册》
               </el-checkbox>
               <el-button
                 type="primary"
                 :loading="phoneLoading"
+                class="form-submit"
                 @click="handlePhoneSignup"
               >
                 注册
@@ -156,18 +132,9 @@ import { ElMessage } from "element-plus";
 import router from "../router.js";
 import config from "./config.json";
 
-type ApiResponse<T = Record<string, unknown>> = {
-  status?: number;
-  message?: string;
-  token?: string;
-  code?: string;
-  mark_num?: string;
-  data?: T;
-};
-
-const AUTH_BASE_URL =
-  (config as Record<string, string | undefined>).AUTH_BASE_URL ??
-  "http://127.0.0.1:8900";
+const BACK_URL =
+  (config as Record<string, string | undefined>).BACK_URL ??
+  "http://localhost:3000";
 
 const activeTab = ref<"account" | "phone">("account");
 
@@ -175,7 +142,6 @@ const accountForm = reactive({
   username: "",
   password: "",
   confirmPassword: "",
-  captcha: "",
   agree: false,
 });
 
@@ -189,16 +155,28 @@ const phoneForm = reactive({
 const accountFormRef = ref<FormInstance>();
 const phoneFormRef = ref<FormInstance>();
 
-const captchaValue = ref("");
 const serverSmsCode = ref("");
 const smsCountdown = ref(0);
-const captchaLoading = ref(false);
 const smsLoading = ref(false);
 const accountLoading = ref(false);
 const phoneLoading = ref(false);
 let countdownTimer: number | null = null;
 
-const validateConfirmPassword = (_rule: unknown, value: string, callback: (err?: Error) => void) => {
+const parseJsonSafe = async (response: Response) => {
+  const raw = await response.text();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(raw.trim() || "服务器返回了非 JSON 数据");
+  }
+};
+
+const validateConfirmPassword = (
+  _rule: unknown,
+  value: string,
+  callback: (err?: Error) => void
+) => {
   if (!value) {
     callback(new Error("请再次输入密码"));
   } else if (value !== accountForm.password) {
@@ -222,7 +200,6 @@ const accountRules: FormRules = {
     },
   ],
   confirmPassword: [{ validator: validateConfirmPassword, trigger: "blur" }],
-  captcha: [{ required: true, message: "请输入验证码", trigger: "blur" }],
 };
 
 const phoneRules: FormRules = {
@@ -253,24 +230,8 @@ const handleAgreementCheck = (agree: boolean) => {
   return true;
 };
 
-const fetchCaptcha = async () => {
-  captchaLoading.value = true;
-  captchaValue.value = "";
-  try {
-    const response = await fetch(`${AUTH_BASE_URL}/get_code`);
-    const data = (await response.json()) as ApiResponse;
-    if (response.ok && data.status === 200 && data.code) {
-      captchaValue.value = data.code;
-      ElMessage.success("验证码已生成");
-    } else {
-      throw new Error(data.message || "获取验证码失败");
-    }
-  } catch (error) {
-    const err = error as Error;
-    ElMessage.error(err.message || "验证码获取异常");
-  } finally {
-    captchaLoading.value = false;
-  }
+const generateSmsCode = (length = 6) => {
+  return Array.from({ length }, () => Math.floor(Math.random() * 10)).join("");
 };
 
 const startSmsCountdown = () => {
@@ -291,29 +252,18 @@ const startSmsCountdown = () => {
   }, 1000);
 };
 
-const fetchSmsCode = async () => {
+const fetchSmsCode = () => {
   if (!/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
     ElMessage.warning("请先输入合法的手机号");
     return;
   }
   smsLoading.value = true;
-  serverSmsCode.value = "";
-  try {
-    const response = await fetch(`${AUTH_BASE_URL}/get_tell_mark`);
-    const data = (await response.json()) as ApiResponse;
-    if (response.ok && data.status === 200 && data.mark_num) {
-      serverSmsCode.value = data.mark_num;
-      ElMessage.success("验证码已发送，请留意短信");
-      startSmsCountdown();
-    } else {
-      throw new Error(data.message || "验证码获取失败");
-    }
-  } catch (error) {
-    const err = error as Error;
-    ElMessage.error(err.message || "验证码获取异常");
-  } finally {
+  setTimeout(() => {
+    serverSmsCode.value = generateSmsCode();
     smsLoading.value = false;
-  }
+    ElMessage.success(`验证码已发送：${serverSmsCode.value}`);
+    startSmsCountdown();
+  }, 300);
 };
 
 const handleAccountSignup = async () => {
@@ -325,28 +275,22 @@ const handleAccountSignup = async () => {
   if (!handleAgreementCheck(accountForm.agree)) {
     return;
   }
-  if (!captchaValue.value || accountForm.captcha !== captchaValue.value) {
-    ElMessage.error("验证码错误，请重新获取");
-    return;
-  }
   accountLoading.value = true;
   try {
-    const response = await fetch(`${AUTH_BASE_URL}/register_pwd`, {
+    const response = await fetch(`${BACK_URL}/api/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: accountForm.username,
         password: accountForm.password,
-        mark2: accountForm.captcha,
       }),
     });
-    const data = (await response.json()) as ApiResponse;
-    if (response.ok && data.status === 200) {
-      ElMessage.success("注册成功，请登录");
-      router.push("/login");
-    } else {
-      throw new Error(data.message || "注册失败");
+    const data = await parseJsonSafe(response);
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "注册失败");
     }
+    ElMessage.success("注册成功，请登录");
+    router.push("/login");
   } catch (error) {
     const err = error as Error;
     ElMessage.error(err.message || "注册失败，请稍后重试");
@@ -370,22 +314,20 @@ const handlePhoneSignup = async () => {
   }
   phoneLoading.value = true;
   try {
-    const response = await fetch(`${AUTH_BASE_URL}/register_tell`, {
+    const response = await fetch(`${BACK_URL}/api/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        tell: phoneForm.phone,
+        username: phoneForm.phone,
         password: phoneForm.password,
-        mark1: phoneForm.code,
       }),
     });
-    const data = (await response.json()) as ApiResponse;
-    if (response.ok && data.status === 200) {
-      ElMessage.success("注册成功，请登录");
-      router.push("/login");
-    } else {
-      throw new Error(data.message || "注册失败");
+    const data = await parseJsonSafe(response);
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "注册失败");
     }
+    ElMessage.success("注册成功，请登录");
+    router.push("/login");
   } catch (error) {
     const err = error as Error;
     ElMessage.error(err.message || "注册失败，请稍后重试");
@@ -417,9 +359,9 @@ onBeforeUnmount(() => {
 }
 
 .signup-card {
-  width: 460px;
-  max-width: 100%;
+  width: min(460px, 100%);
   border-radius: 24px;
+  box-shadow: 0 18px 40px rgba(31, 42, 68, 0.12);
 }
 
 .signup-header {
@@ -450,9 +392,20 @@ onBeforeUnmount(() => {
 
 .form-footer {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 12px;
+  align-items: flex-start;
   margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.form-agreement {
+  flex: 1;
+  line-height: 1.4;
+  color: #4b5563;
+}
+
+.form-submit {
+  min-width: 148px;
 }
 
 .inline-tag {
@@ -464,4 +417,41 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   color: #7c8db5;
 }
+
+@media (max-width: 640px) {
+  .signup-page {
+    padding: 16px 12px 24px;
+  }
+
+  .signup-card {
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(31, 42, 68, 0.18);
+  }
+
+  .signup-header h2 {
+    font-size: 20px;
+  }
+
+  .signup-header p {
+    font-size: 13px;
+  }
+
+  .signup-tabs :deep(.el-tabs__header) {
+    margin-bottom: 16px;
+  }
+
+  .form-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-agreement {
+    width: 100%;
+  }
+
+  .form-submit {
+    width: 100%;
+  }
+}
+
 </style>
