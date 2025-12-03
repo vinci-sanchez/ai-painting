@@ -73,7 +73,11 @@
                     :loading="smsLoading"
                     @click="fetchSmsCode"
                   >
-                    {{ smsCountdown > 0 ? `${smsCountdown}s 后重试` : "获取验证码" }}
+                    {{
+                      smsCountdown > 0
+                        ? `${smsCountdown}s 后重试`
+                        : "获取验证码"
+                    }}
                   </el-button>
                 </template>
               </el-input>
@@ -106,6 +110,8 @@ import type { FormInstance, FormRules } from "element-plus";
 import { ElMessage } from "element-plus";
 import router from "../router.js";
 import config from "./config.json";
+import { setAuthUser } from "./home-show/auth-user.js";
+import { refreshUserComics } from "./home-show/user-comics";
 
 const BACK_URL =
   (config as Record<string, string | undefined>).BACK_URL ??
@@ -184,8 +190,6 @@ const generateSmsCode = (length = 6) => {
   return Array.from({ length }, () => Math.floor(Math.random() * 10)).join("");
 };
 
-
-
 const startSmsCountdown = () => {
   smsCountdown.value = 60;
   if (countdownTimer) {
@@ -241,6 +245,13 @@ const handlePasswordLogin = async () => {
     if (!response.ok) {
       throw new Error(data.error || data.message || "登录失败");
     }
+    const usernameFromResponse =
+      typeof data.username === "string" ? data.username : "";
+    const username = (usernameFromResponse || passwordForm.username).trim();
+    if (username) {
+      setAuthUser({ username });
+      await refreshUserComics(username).catch(() => {});
+    }
     ElMessage.success(data.message || "登录成功");
     router.push("/");
   } catch (error) {
@@ -272,6 +283,13 @@ const handlePhoneLogin = async () => {
     const data = await parseJsonSafe(response);
     if (!response.ok) {
       throw new Error(data.error || "未找到该用户，请先注册");
+    }
+    const usernameFromResponse =
+      typeof data.username === "string" ? data.username : "";
+    const username = (usernameFromResponse || phoneForm.phone).trim();
+    if (username) {
+      setAuthUser({ username });
+      await refreshUserComics(username).catch(() => {});
     }
     ElMessage.success("登录成功");
     router.push("/");
@@ -390,5 +408,4 @@ onBeforeUnmount(() => {
     width: 100%;
   }
 }
-
 </style>

@@ -49,6 +49,8 @@ const changeFontSize = () => {
 .main {
   background-color: rgb(120, 120, 120);
   font-size: v-bind(fontSize);
+  min-height: 240px;
+  padding: 16px;
 }
 
 .main.redBg {
@@ -64,6 +66,10 @@ const changeFontSize = () => {
 
 .bottom-side {
   background-color: yellow;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .color1 {
@@ -81,5 +87,11 @@ const changeFontSize = () => {
 
 .font1 {
   background-color: rgb(243, 244, 245);
+}
+
+@media (max-width: 600px) {
+  .bottom-side button {
+    width: 100%;
+  }
 }
 </style>

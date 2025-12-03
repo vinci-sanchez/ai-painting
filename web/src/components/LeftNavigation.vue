@@ -83,7 +83,7 @@ const handleSelect = (index: string) => {
 
 <style>
 .sidebar {
-  height: 100%;
+  height: 100vh;
   width: auto; /*有点bug*/
   display: flex;
   background-color: var(--el-menu-bg-color, transparent);

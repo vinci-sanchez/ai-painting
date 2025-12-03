@@ -19,18 +19,39 @@ import LeftNavigation from "../components/LeftNavigation.vue";
 
 <style scoped>
 .home-layout {
-  display: flex; /* 左右排列 */
-  height: 100%; /* 视需求设置高度 */
+  display: flex;
+  min-height: calc(100vh - 72px);
+  height: 100%;
 }
 
 .home-layout__nav {
-  width: auto; /* 左侧固定宽度，可按需要调整 */
+  width: auto;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
 }
 
 .home-layout__content {
-  flex: 1; /* 右侧撑满剩余空间 */
-  overflow: auto; /* 内容溢出时滚动 */
-  padding: 16px; /* 可选的内边距 */
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+@media (max-width: 960px) {
+  .home-layout {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .home-layout__nav {
+    width: auto;
+    position: sticky;
+    top: 0;
+  }
+
+  .home-layout__content {
+    padding: 12px 8px 24px;
+  }
 }
 </style>

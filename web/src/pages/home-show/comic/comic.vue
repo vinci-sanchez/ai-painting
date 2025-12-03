@@ -16,7 +16,7 @@
             :key="comicPage.id"
             :index="comicPage.id.toString()"
           >
-            第{{ comicPage.id }}页: {{ comicPage.title }}
+            第{{ formatPageOrder(comicPage) }}页: {{ comicPage.title }}
           </el-menu-item>
         </el-menu>
         <el-empty
@@ -29,15 +29,17 @@
 
     <el-main class="comic-content">
       <el-card>
-        <span class="page-title">{{ showPage.title }}</span>
-        <div class="comic-right">
-          <span>觉得不错？</span>
-          <el-button type="primary" plain @click="handleShareClick">
-            <el-icon><Share /></el-icon>
-          </el-button>
+        <div class="comic-card-header">
+          <span class="page-title">{{ showPage.title }}</span>
+          <div class="comic-right">
+            <span>觉得不错？</span>
+            <el-button type="primary" plain @click="handleShareClick">
+              <el-icon><Share /></el-icon>
+            </el-button>
+          </div>
         </div>
         <!-- 分享面板 -->
-        <el-dialog v-model="SharePanel" title=" 分享" width="500">
+        <el-dialog v-model="SharePanel" title=" 分享" :width="shareDialogWidth">
           <!-- 二维码分享 -->
           <div class="share-qr">
             <span class="share-section-title">生成二维码</span>
@@ -90,7 +92,7 @@
         >
           <el-image
             style="
-              width: 400px;
+              width: 100%;
               min-height: 120px;
               height: auto;
               object-fit: contain;
@@ -100,52 +102,76 @@
           />
         </div>
 
-        <span>不是喜欢的类型？-></span>
-        <el-button type="primary" plain @click="ParameterModify"
-          >修改参数</el-button
-        ><span class="comic-right">
-          <el-button type="primary" plain @click="handlePrevPage"
-            >上一章</el-button
-          >
-          <el-button type="primary" plain @click="handleNextPage"
-            >下一章</el-button
-          ></span
-        >
+        <div class="comic-actions">
+          <div class="comic-actions__left">
+            <span>不是喜欢的类型？-></span>
+            <el-button type="primary" plain @click="ParameterModify">
+              修改参数
+            </el-button>
+          </div>
+          <div class="comic-right comic-nav">
+            <el-button type="primary" plain @click="handlePrevPage">
+              上一页
+            </el-button>
+            <el-button type="primary" plain @click="handleNextPage">
+              下一页
+            </el-button>
+          </div>
+        </div>
       </el-card>
     </el-main>
   </el-container>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
 import QRCode from "qrcode";
 import type { ImageProps } from "element-plus";
 import { ElMessage } from "element-plus";
 import bus from "../eventbus.js";
-import { comicimage, setComicImage, setParameterDraft } from "../shared-text";
+import { setParameterDraft } from "../shared-text";
 import type { ParameterDraft } from "../shared-text";
 import router from "../../../router.js";
+import { currentUser } from "../auth-user";
+import {
+  refreshUserComics,
+  userComics,
+} from "../user-comics";
+import type { StoredComic } from "../user-comics";
 
 type ComicPage = {
   id: number;
   title: string;
   images?: string;
   parameters?: ParameterDraft;
+  pageNumber?: number;
+  sourceUrl?: string;
+  tempId?: number;
 };
 type ComicPayload = {
   url: string;
   page_id: number;
   title: string;
   parameters?: ParameterDraft;
+  imageBase64?: string;
 };
 onMounted(() => {
+  updateScreenMode();
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", updateScreenMode);
+  }
   console.log("开始监听漫画生成事件");
   bus.on("make-imageover", Show_comic);
+  bus.on("comic-persisted", handleComicPersisted);
 });
 
 onBeforeUnmount(() => {
   console.log("监听结束");
   bus.off("make-imageover", Show_comic);
+  bus.off("comic-persisted", handleComicPersisted);
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", updateScreenMode);
+  }
 });
 
 const loading = ref(true);
@@ -159,6 +185,17 @@ const Sharecomic = ref("");
 const SharecomicLoading = ref(false);
 const saveComicLoading = ref(false);
 const currentComicImage = computed(() => showPage.value.images || "");
+const isSmallScreen = ref(false);
+const shareDialogWidth = computed(() =>
+  isSmallScreen.value ? "92vw" : "500px"
+);
+
+const updateScreenMode = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  isSmallScreen.value = window.innerWidth < 768;
+};
 
 const handleShareClick = async () => {
   SharePanel.value = true;
@@ -205,6 +242,7 @@ const fits = [
 const url =
   "https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg";
 
+const sessionPages = ref<ComicPage[]>([]);
 const comicPages = ref<ComicPage[]>([]);
 const activePageId = ref("");
 const pageRefs = ref<Partial<Record<string, HTMLElement>>>({});
@@ -218,13 +256,95 @@ const setPageRef = (el: HTMLElement | null, id: number) => {
   }
 };
 
+const normalizeStoredComic = (record: StoredComic): ComicPage => {
+  const metadata = record.metadata ?? null;
+  const parameters = extractParameters(metadata);
+  let sourceUrl: string | undefined;
+  if (metadata && typeof metadata["image_url"] === "string") {
+    sourceUrl = metadata["image_url"] as string;
+  }
+  return {
+    id: record.id,
+    title: record.title,
+    images: record.imageBase64 || sourceUrl,
+    pageNumber: record.pageNumber,
+    sourceUrl,
+    parameters,
+  };
+};
+
+const extractParameters = (
+  metadata?: Record<string, unknown> | null
+): ParameterDraft | undefined => {
+  if (!metadata) {
+    return undefined;
+  }
+  const raw = metadata ? metadata["parameters"] : undefined;
+  if (!raw || typeof raw !== "object") {
+    return undefined;
+  }
+  const result = { ...(raw as ParameterDraft) };
+  if (Array.isArray(result.customTags)) {
+    result.customTags = [...result.customTags];
+  }
+  return result;
+};
+
+const syncComicPages = () => {
+  const storedPages = userComics.value.map((item) =>
+    normalizeStoredComic(item)
+  );
+  const combined = [...storedPages, ...sessionPages.value];
+  comicPages.value = combined;
+  if (!combined.length) {
+    return;
+  }
+  const current = combined.find(
+    (page) => page.id.toString() === activePageId.value
+  );
+  if (current) {
+    showPage.value = current;
+    return;
+  }
+  const first = combined[0];
+  activePageId.value = first.id.toString();
+  showPage.value = first;
+};
+
+watch(userComics, syncComicPages, { immediate: true, deep: true });
+watch(
+  sessionPages,
+  () => {
+    syncComicPages();
+  },
+  { deep: true }
+);
+
+watch(
+  () => currentUser.value?.username,
+  (username) => {
+    if (username) {
+      refreshUserComics(username);
+    } else {
+      sessionPages.value = [];
+      comicPages.value = [];
+      activePageId.value = "";
+    }
+  },
+  { immediate: true }
+);
+
 //展示漫画
 function Show_comic(payload: unknown) {
   const data = payload as ComicPayload;
+  const tempId = typeof data.page_id === "number" ? data.page_id : Date.now();
   const newPage: ComicPage = {
-    id: data.page_id,
+    id: -Math.abs(tempId),
+    tempId,
     title: data.title,
-    images: data.url,
+    images: data.imageBase64 || data.url,
+    pageNumber: tempId,
+    sourceUrl: data.url,
     parameters: data.parameters
       ? {
           ...data.parameters,
@@ -234,10 +354,22 @@ function Show_comic(payload: unknown) {
         }
       : undefined,
   };
-  comicPages.value.push(newPage);
+  sessionPages.value = [newPage, ...sessionPages.value];
   activePageId.value = newPage.id.toString();
   showPage.value = newPage;
   loading.value = false;
+}
+
+function handleComicPersisted(payload: unknown) {
+  const data = (payload ?? {}) as { temp_id?: number };
+  const tempId = data.temp_id;
+  if (typeof tempId !== "number") {
+    return;
+  }
+  const index = sessionPages.value.findIndex((page) => page.tempId === tempId);
+  if (index !== -1) {
+    sessionPages.value.splice(index, 1);
+  }
 }
 
 const handlePageSelect = (index: string) => {
@@ -344,6 +476,9 @@ const saveShareQr = () => {
   link.click();
   document.body.removeChild(link);
 };
+
+const formatPageOrder = (page: ComicPage) =>
+  typeof page.pageNumber === "number" ? page.pageNumber : Math.abs(page.id);
 </script>
 
 <style scoped>
@@ -388,6 +523,38 @@ const saveShareQr = () => {
 .page-preview {
   display: flex;
   justify-content: center;
+}
+.page-preview :deep(.el-image) {
+  width: min(100%, 480px);
+  height: auto;
+}
+
+.comic-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.comic-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.comic-actions__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.comic-nav {
+  gap: 8px;
 }
 
 .demo-card {
@@ -446,5 +613,55 @@ const saveShareQr = () => {
 .share-section-desc {
   font-size: 12px;
   color: #909399;
+}
+
+@media (max-width: 960px) {
+  .comic-layout {
+    flex-direction: column;
+  }
+
+  .comic-sidebar {
+    width: 100% !important;
+    border-right: none;
+    border-bottom: 1px solid var(--el-border-color);
+    margin-bottom: 16px;
+  }
+
+  .comic-content {
+    padding: 0;
+  }
+
+  .comic-menu {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .comic-menu .el-menu-item {
+    flex: 1 1 50%;
+  }
+}
+
+@media (max-width: 600px) {
+  .comic-card-header,
+  .comic-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .comic-right {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .comic-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .share-save {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 </style>

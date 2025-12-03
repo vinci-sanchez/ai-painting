@@ -6,7 +6,25 @@
 </template>
 
 <script setup>
-import Header from './components/Header.vue';
+import { watch } from "vue";
+import Header from "./components/Header.vue";
+import { currentUser } from "./pages/home-show/auth-user";
+import {
+  clearUserComics,
+  refreshUserComics,
+} from "./pages/home-show/user-comics";
+
+watch(
+  () => currentUser.value?.username,
+  (username) => {
+    if (username) {
+      refreshUserComics(username);
+    } else {
+      clearUserComics();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <!-- <style>

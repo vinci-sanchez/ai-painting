@@ -1,26 +1,25 @@
 <template>
-  <div>
-    <div>
-      <el-tabs v-model="activeName">
+  <div class="crawl-page">
+    <el-tabs v-model="activeName">
         <!-- 爬取小说 -->
         <el-tab-pane label="爬取小说" name="first">
           <section id="crawl-section" class="card mb-5 shadow-lg">
             <div class="card-body">
               <h2 class="card-title text-center mb-4">小说爬取</h2>
               <p class="text-muted text-center">
-                支持从比如 https://www.blqukk.cc/ 爬取小说章节(因为服务器在国外，网站可能会出现404错误限制访问的情况，请酌情使用)
+                支持从比如 <a href="https://www.blqukk.cc/" target="_blank" rel="noopener noreferrer">https://www.blqukk.cc/</a> 爬取小说章节(因为服务器在国外，网站可能会出现404错误限制访问的情况，请酌情使用)
               </p>
-              <div class="input-group mb-3">
-                <span class="input-group-text">
+              <div class="input-group mb-3 input-group--responsive">
+                <span class="input-group-text" style="max-width: 400px">
                   <i class="fas fa-link"></i>
-                </span>
+               
                 <input
                   type="text"
                   id="novelUrl"
                   class="form-control"
                   placeholder="请输入小说目录 URL"
                   aria-label="小说目录 URL"
-                />
+                /> </span>
                 <el-input-number
                   v-model="num"
                   :min="1"
@@ -31,7 +30,7 @@
                 >
                   <template #suffix> <span>章</span></template>
                 </el-input-number>
-                <button v-on:click="crawl" class="btn btn-primary" id="crawl">
+                <button v-on:click="crawl" class="btn btn-primary" style="max-width: 150px;" id="crawl">
                   <i class="fas fa-spider"></i> 开始爬取
                 </button>
               </div>
@@ -115,7 +114,6 @@
           <i class="fas fa-cut"></i> 去分段
         </button>
       </el-tabs>
-    </div>
   </div>
 </template>
 
@@ -190,9 +188,10 @@ async function crawl() {
   }
   try {
     const url = urlInput.value;
-    let index = num.value - 1;
-    const response = await fetch(`${config.BACK_URL}/api/crawl`, {
-      //http://localhost:3000/api/crawl
+    const index = num.value - 1;
+    const response = await fetch(`${config.Crawle_url}`,
+     // `${config.BACK_URL}/api/crawl`
+       {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -204,9 +203,9 @@ async function crawl() {
 
     if (!response.ok) {
       if (resultDiv) {
-        resultDiv.innerHTML += `<h3>HTTP错误</h3><p>状态码 ${response.status}，抓取章节失败: 未找到对应的章节链接，可能是站点结构变化或 URL 无效</p><hr>`;
+        resultDiv.innerHTML += `<h3>HTTP Error</h3><p>Received status ${response.status} from the server. Please check the URL and try again.</p><hr>`;
       }
-      throw new Error(`HTTP错误状态码 ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
     const data = (await response.json()) as CrawlResponse;
@@ -242,17 +241,17 @@ async function crawl() {
     }
 
     // 如果还有后续章节则追加按钮
-    if (resultDiv) {
-      if (num.value < data.total_chapters) {
-        resultDiv.innerHTML += `<button id="continue-crawl" class="btn btn-primary">继续爬取</button>`;
-        const continueBtn = document.getElementById("continue-crawl");
-        if (continueBtn) {
-          continueBtn.addEventListener("click", crawl);
-        }
-      } else {
-        resultDiv.innerHTML += "<p>已爬取全部章节</p>";
-      }
-    }
+    // if (resultDiv) {
+    //   if (num.value < data.total_chapters) {
+    //     resultDiv.innerHTML += `<button id="continue-crawl" class="btn btn-primary">继续爬取</button>`;
+    //     const continueBtn = document.getElementById("continue-crawl");
+    //     if (continueBtn) {
+    //       continueBtn.addEventListener("click", crawl);
+    //     }
+    //   } else {
+    //     resultDiv.innerHTML += "<p>已爬取全部章节</p>";
+    //   }
+    // }
 
     // 爬取成功后自动填充输入框
     textContent.value = data.chapters
@@ -346,9 +345,34 @@ const triggerFileDialog = () => {
   uploadError.value = "";
   fileInputRef.value?.click();
 };
+
 </script>
 
 <style scoped>
+.crawl-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-group--responsive {
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.input-group--responsive > * {
+  flex: 1 1 180px;
+}
+
+.input-group--responsive .form-control {
+  min-width: 220px;
+}
+
+.input-group--responsive .el-input-number {
+  width: 180px;
+}
+
 .upload-dropzone {
   border: 2px dashed #c0c4cc;
   border-radius: 12px;
@@ -370,5 +394,25 @@ const triggerFileDialog = () => {
 
 .upload-file-input {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .input-group--responsive {
+    flex-direction: column;
+  }
+
+  .input-group--responsive > * {
+    width: 100% !important;
+    flex: 1 1 auto;
+  }
+
+  .input-group--responsive button,
+  .input-group--responsive .el-input-number {
+    width: 100%;
+  }
+
+  .upload-dropzone {
+    padding: 24px 12px;
+  }
 }
 </style>

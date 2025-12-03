@@ -134,12 +134,12 @@ body {
 #segmentsList:empty::before,
 #panels:empty::before,
 #result:empty::before {
-  content: "加载�?..";
+  content: "快爬！！！(我好不容易突破的难题)";
   color: var(--secondary-color);
   font-style: italic;
 }
 
-/* 响应式设�?*/
+/* 响应式设计*/
 @media (max-width: 576px) {
   .container {
     padding: 15px;
@@ -204,8 +204,8 @@ footer {
 }
 .char {
   display: inline-block; /* 字符独立显示 */
-  animation: showAndHide 4s forwards; /* 4秒循环动�?*/
-  opacity: 0; /* 初始不可�?*/
+  animation: showAndHide 4s forwards; /* 4秒循环动画 */
+  opacity: 0; /* 初始不可见 */
 }
 .pause-animation .char {
   animation-play-state: paused !important;
@@ -213,7 +213,7 @@ footer {
 @keyframes showAndHide {
   0% {
     opacity: 0;
-  } /* 初始不可�?*/
+  } /* 初始不可见*/
   20% {
     opacity: 1;
   } /* 淡入 */
@@ -225,7 +225,7 @@ footer {
   } /* 淡出 */
   100% {
     opacity: 0;
-  } /* 保持不可�?*/
+  } /* 保持不可见*/
 }
 .page-content {
   position: relative;

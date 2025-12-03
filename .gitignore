@@ -1,8 +1,10 @@
 node_modules
 web copy
 Gin copy
+Gincrawl
 Gin/output.json
 Gin/python/temp_input.txt
+cfc_crawler
 .vscode/
 Gin/app.log
 server.md

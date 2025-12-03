@@ -1,7 +1,7 @@
 <template>
   <header>
     <div id="navigation"></div>
-    <nav class="navbar  navbar-dark header-gradient">
+    <nav class="navbar navbar-dark header-gradient">
       <div class="container">
         <a class="navbar-brand" href="#">Text-to-manga Studio</a>
         <!-- <span
@@ -15,39 +15,43 @@
         > -->
 
         <!-- 让汉堡 + 下拉面板包在一个容器里，方便 hover -->
-        <div
-          class="toggler-wrapper"
-          @mouseenter="menuOpen = true"
-          @mouseleave="menuOpen = false"
-        >
-          <button
-            class="navbar-toggler"
-            type="button"
-            aria-label="切换导航"
+        <div class="navbar-actions">
+          <div v-if="isLoggedIn" class="navbar-user">
+            <span class="navbar-user__label">欢迎</span>
+            <span class="navbar-user__name">{{ username }}</span>
+          </div>
+          <div
+            class="toggler-wrapper"
+            @mouseenter="menuOpen = true"
+            @mouseleave="menuOpen = false"
           >
-            <span class="navbar-toggler-icon"></span>
-          </button>
-
-          <!-- hover 下拉菜单（向下弹出） -->
-          <transition name="fade-slide">
-            <div v-show="menuOpen" class="hover-menu">
-              <div class="hover-menu__item">
-                <button class="hover-menu__btn" @click="go({ name: 'home-welcome' })">
-                  仪表盘
-                </button>
+            <button class="navbar-toggler" type="button" aria-label="????">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <!-- hover ?????????? -->
+            <transition name="fade-slide">
+              <div v-show="menuOpen" class="hover-menu">
+                <div class="hover-menu__item">
+                  <button
+                    class="hover-menu__btn"
+                    @click="go({ name: 'home-welcome' })"
+                  >
+                    仪表盘
+                  </button>
+                </div>
+                <div class="hover-menu__item">
+                  <button class="hover-menu__btn" @click="go('/login')">
+                    登录
+                  </button>
+                </div>
+                <div class="hover-menu__item">
+                  <button class="hover-menu__btn" @click="go('/signup')">
+                    注册
+                  </button>
+                </div>
               </div>
-              <div class="hover-menu__item">
-                <button class="hover-menu__btn" @click="go('/login')">
-                  登录
-                </button>
-              </div>
-              <div class="hover-menu__item">
-                <button class="hover-menu__btn" @click="go('/signup')">
-                  注册
-                </button>
-              </div>
-            </div>
-          </transition>
+            </transition>
+          </div>
         </div>
 
         <div class="collapse navbar-collapse" id="navbarNav">
@@ -78,15 +82,18 @@
 </template>
 
 <script setup>
-import { ref } from "vue"
-import { useRouter } from "vue-router"
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import { currentUser } from "../pages/home-show/auth-user";
 
-const menuOpen = ref(false)
-const router = useRouter()
+const menuOpen = ref(false);
+const router = useRouter();
+const username = computed(() => currentUser.value?.username ?? "");
+const isLoggedIn = computed(() => Boolean(username.value));
 
 function go(target) {
-  menuOpen.value = false
-  router.push(target)
+  menuOpen.value = false;
+  router.push(target);
 }
 </script>
 
@@ -119,10 +126,33 @@ function go(target) {
   text-decoration: none;
 }
 
+.navbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.navbar-user__name {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
 /* ===== 新增：汉堡 hover 下拉 ===== */
 .toggler-wrapper {
   position: relative;
-  margin-left: auto; /* 保持汉堡在右侧（不影响你其它布局） */
 }
 
 .hover-menu {
@@ -167,5 +197,20 @@ function go(target) {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+@media (max-width: 640px) {
+  .navbar-actions {
+    gap: 8px;
+  }
+
+  .navbar-user {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .navbar-user__label {
+    display: none;
+  }
 }
 </style>

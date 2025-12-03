@@ -4,5 +4,6 @@
   "TEXT_MODEL": "ep-20251021151025-8q7tt",
   "IMAGE_MODEL": "ep-20251021153509-xh86n",
   "BACK_URL": "https://ai-painting.onrender.com",
-  "back-url1":"http://localhost:3000"
+  "back-url1":"http://localhost:3000",
+  "Crawle_url":"https://bq0jx3qa0v4y4.cfc-execute.bj.baidubce.com/api/crawler"
 }

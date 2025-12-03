@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="card-container">
-    <el-card class="card card--wide">
+    <el-card class="card card--wide" style="min-height: 440px">
       <template #header>
         <div class="card-header">
           <span>调整分段</span>
@@ -9,25 +9,27 @@
       <!-- <p class="text item" style="height: 250px">{{ textParagraph }}</p> -->
       <el-input
         v-model="textParagraph"
-        :autosize="{ minRows: 15, maxRows: 15 }"
+        :autosize="{ minRows: 10, maxRows: 10 }"
         type="textarea"
         placeholder="Please input"
       />
       <template #footer>
-        <button
-          type="button"
-          class="btn btn-outline-secondary"
-          @click="showPreviousSegment"
-        >
-          <i class="fas fa-cut"></i> 上一段
-        </button>
-        <button
-          type="button"
-          class="btn btn-outline-secondary"
-          @click="showNextSegment"
-        >
-          <i class="fas fa-cut"></i> 下一段
-        </button>
+        <div class="segment-nav">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            @click="showPreviousSegment"
+          >
+            <i class="fas fa-cut"></i> 上一段
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            @click="showNextSegment"
+          >
+            <i class="fas fa-cut"></i> 下一段
+          </button>
+        </div>
       </template>
     </el-card>
 
@@ -38,34 +40,37 @@
         </div>
       </template>
 
-      <p>风格</p>
-      <p>
-        <el-select v-model="style" placeholder="选择风格" style="width: 240px">
-          <el-option
-            v-for="item in style_options"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </p>
-      <p>色调</p>
-      <p>
-        <el-select v-model="color" placeholder="选择色调" style="width: 240px">
-          <el-option
-            v-for="item in color_options"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </p>
-      <p>其他提示词</p>
+      <div class="style-color-row">
+        <div class="style-field">
+          <span>风格</span>
+          <el-select v-model="style" placeholder="请选择风格" style="width: 240px">
+            <el-option
+              v-for="item in style_options"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </div>
+        <div class="color-field">
+          <span>颜色</span>
+          <el-select v-model="color" placeholder="请选择颜色" style="width: 240px">
+            <el-option
+              v-for="item in color_options"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </div>
+      </div>
+
+      <p>其他提示</p>
       <p>
         <el-input-tag
           v-model="other_hint"
           style="width: 240px"
-          placeholder="请输入提示词(可填可不填)"
+          placeholder="请输入其他提示(可选)"
           aria-label="Please click the Enter key after input"
         />
       </p>
@@ -75,7 +80,7 @@
           class="btn btn-outline-info"
           @click="gotoparameter_preview"
         >
-          <i class="fas fa-film"></i> 提取分镜
+          <i class="fas fa-film"></i>提取分镜
         </button>
       </template>
     </el-card>
@@ -392,12 +397,79 @@ async function generateStoryboard(text?: string) {
   display: flex;
   align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
 }
+.card--wide,
+.card--narrow {
+  flex: 1 1 320px;
+}
+
 .card--wide {
-  width: 55vw;
+  min-width: 320px;
 }
 
 .card--narrow {
-  width: 30vw;
+  max-width: 360px;
+}
+
+.card .el-input,
+.card .el-select,
+.card .el-input-tag {
+  width: 100%;
+}
+
+.segment-nav {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.segment-nav .btn {
+  width: auto !important;
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.style-color-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  margin-bottom: 12px;
+}
+
+.style-field,
+.color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 160px;
+}
+
+@media (max-width: 1024px) {
+  .card-container {
+    flex-direction: column;
+  }
+
+  .card--wide,
+  .card--narrow {
+    width: 100%;
+    max-width: none;
+  }
+
+  .card .btn {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .segment-nav {
+    justify-content: space-between;
+  }
+
+  .style-color-row {
+    flex-wrap: wrap;
+  }
 }
 </style>

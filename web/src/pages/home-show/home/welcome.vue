@@ -18,7 +18,13 @@
     </section>
 
     <el-row :gutter="20" class="mt-4">
-      <el-col :md="8" v-for="feature in features" :key="feature.title">
+      <el-col
+        v-for="feature in features"
+        :key="feature.title"
+        :xs="24"
+        :sm="12"
+        :md="8"
+      >
         <el-card shadow="hover" class="welcome__feature-card">
           <div class="welcome__feature-icon">
             <i :class="feature.icon"></i>
@@ -141,5 +147,30 @@ const steps = [
 }
 .welcome__steps h4 {
   margin: 0 0 4px;
+}
+
+@media (max-width: 960px) {
+  .welcome__hero {
+    flex-direction: column;
+    padding: 24px;
+    gap: 16px;
+  }
+
+  .welcome__subtitle {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .welcome__actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .welcome__actions .el-button {
+    width: 100%;
+  }
 }
 </style>

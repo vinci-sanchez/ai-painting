@@ -1,9 +1,9 @@
 <template>
-  <el-card style="width: 100%">
+  <el-card class="parameter-preview">
     <el-descriptions
       class="margin-top"
       title="项目内容"
-      :column="3"
+      :column="descriptionColumns"
       :size="size"
       border
     >
@@ -71,16 +71,23 @@
 
     <!-- 其他配置 -->
     <el-button type="primary" @click="ConfigurationClick">其他配置</el-button>
-    <el-dialog v-model="Configuration" title=" 配置(不懂默认就行)" width="500">
+    <el-dialog
+      v-model="Configuration"
+      title=" 配置(不懂默认就行)"
+      :width="dialogWidth"
+    >
       <el-form label-position="top" label-width="100px">
         <el-form-item label="BASE_URL">
           <el-input v-model="UPDATE_BASE_URL" />
         </el-form-item>
         <el-form-item label="接入点模型ID">
-         <el-input v-model="UPDATE_IMAGE_MODEL" />  
+          <el-input v-model="UPDATE_IMAGE_MODEL" />
         </el-form-item>
         <el-form-item label="API_KEY">
-        <el-input v-model="UPDATE_API_KEY" placeholder="如果更改,此项为必填项"  /> 
+          <el-input
+            v-model="UPDATE_API_KEY"
+            placeholder="如果更改,此项为必填项"
+          />
         </el-form-item>
       </el-form>
     </el-dialog>
@@ -97,7 +104,7 @@
       <el-descriptions
         class="margin-top"
         title="详细配置"
-        :column="3"
+        :column="descriptionColumns"
         :size="size"
         :style="blockMargin"
       >
@@ -148,9 +155,10 @@
 </template>
 <script lang="ts" setup>
 defineOptions({ name: "parameter-preview" });
-import { computed, ref, onMounted, onBeforeUnmount, toRaw, watch } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { ElMessage } from "element-plus";
 import bus from "../eventbus.js";
+import { currentUser } from "../auth-user";
 import {
   Iphone,
   Location,
@@ -169,6 +177,7 @@ import {
 import type { ParameterDraft as ComicParameterDraft } from "../shared-text";
 import router from "../../../router.js";
 import config from "../../config.json";
+import { saveComicForCurrentUser } from "../user-comics";
 const BACK_URL = config.BACK_URL;
 const API_BASE_URL = config.BASE_URL;
 const novel = ref("");
@@ -224,7 +233,7 @@ const promptSegments = computed(() =>
 /////自定义配置
 const UPDATE_IMAGE_MODEL = ref(config.IMAGE_MODEL);
 const UPDATE_BASE_URL = ref(API_BASE_URL);
-const UPDATE_API_KEY = ref(config.API_KEY);
+const UPDATE_API_KEY = ref("");
 /////分镜接受
 const scene = ref("");
 const prompt = ref("");
@@ -302,6 +311,10 @@ const buildParametersForPage = (): ComicParameterDraft => ({
 });
 //////监听
 onMounted(() => {
+  updateResponsiveState();
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", updateResponsiveState);
+  }
   console.log("开始监听分镜生成事件");
   loading.value = true;
   bus.on("storyboard-generated", handleStoryboard);
@@ -311,6 +324,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   bus.off("storyboard-generated", handleStoryboard);
   bus.off("comic-generated", handleMeta);
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", updateResponsiveState);
+  }
 });
 
 const handleStoryboard = (payload: unknown) => {
@@ -334,8 +350,28 @@ const handleMeta = (payload: unknown) => {
 };
 //////////////////////配置弹窗
 const Configuration = ref(false);
+const descriptionColumns = ref(3);
+const isCompactScreen = ref(false);
+const dialogWidth = computed(() => (isCompactScreen.value ? "96vw" : "500px"));
 const ConfigurationClick = async () => {
   Configuration.value = true;
+};
+
+const updateResponsiveState = () => {
+  if (typeof window === "undefined") {
+    descriptionColumns.value = 3;
+    isCompactScreen.value = false;
+    return;
+  }
+  const width = window.innerWidth;
+  isCompactScreen.value = width < 768;
+  if (width < 640) {
+    descriptionColumns.value = 1;
+  } else if (width < 1024) {
+    descriptionColumns.value = 2;
+  } else {
+    descriptionColumns.value = 3;
+  }
 };
 //////////////////////////////////////url转base64
 const last_image = "";
@@ -364,6 +400,32 @@ function urlToBase64(url: string): Promise<string> {
   });
 }
 
+async function imageUrlToBase64(url: string): Promise<string> {
+  try {
+    return await urlToBase64(url);
+  } catch (error) {
+    console.warn("Fallback to fetch for base64 conversion", error);
+  }
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`无法下载图片: ${response.status}`);
+  }
+  const contentType = response.headers.get("content-type") ?? "image/png";
+  const buffer = await response.arrayBuffer();
+  const encoded = bufferToBase64(buffer);
+  return `data:${contentType};base64,${encoded}`;
+}
+
+function bufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    const chunk = bytes.subarray(i, i + 0x8000);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
 //转到生成漫画
 async function goGenerateComic() {
   const parameters = buildParametersForPage();
@@ -384,15 +446,60 @@ async function goGenerateComic() {
   try {
     loading.value = true;
     const result = await generateImage(comicData);
-    router.push({ name: "home-comic" });
     const payload = {
       page_id: page_id++,
-      title: novel.value || "未命名章节",
+      title: novel.value || "\u672a\u547d\u540d\u7ae0\u8282",
       url: result.image_url,
       parameters,
+      imageBase64: "",
     };
-    console.log("图像生成结果:", result);
+    console.log("Image generation result:", result);
     setComicImage([novel.value, result.image_url]);
+
+    if (currentUser.value?.username) {
+      try {
+        const base64 = await imageUrlToBase64(result.image_url);
+        payload.imageBase64 = base64;
+        const saved = await saveComicForCurrentUser({
+          title: payload.title,
+          pageNumber: payload.page_id,
+          imageBase64: base64,
+          imageUrl: result.image_url,
+          metadata: {
+            parameters,
+            image_url: result.image_url,
+          },
+        });
+        if (saved) {
+          bus.emit("comic-persisted", {
+            temp_id: payload.page_id,
+            storage_id: saved.id,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to persist comic", error);
+        const saved = await saveComicForCurrentUser({
+          title: payload.title,
+          pageNumber: payload.page_id,
+          imageUrl: result.image_url,
+          metadata: {
+            parameters,
+            image_url: result.image_url,
+          },
+        }).catch((err) => {
+          console.error("Server side base64 conversion failed", err);
+          return null;
+        });
+        if (saved) {
+          bus.emit("comic-persisted", {
+            temp_id: payload.page_id,
+            storage_id: saved.id,
+          });
+        }
+      }
+    }
+
+    router.push({ name: "home-comic" });
     loading.value = false;
     setTimeout(() => {
       bus.emit("make-imageover", payload);
@@ -476,6 +583,16 @@ const blockMargin = computed(() => {
 defineProps<{ text?: string }>();
 </script>
 <style scoped>
+.parameter-preview {
+  width: 100%;
+}
+
+.parameter-preview :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .el-descriptions {
   margin-top: 20px;
 }
@@ -486,9 +603,39 @@ defineProps<{ text?: string }>();
 .margin-top {
   margin-top: 20px;
 }
+.page-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.parameter-preview :deep(.el-descriptions__cell) {
+  word-break: break-word;
+}
 .card-footer-actions {
   display: flex;
   justify-content: flex-end;
   padding-right: 30px;
+}
+
+@media (max-width: 960px) {
+  .parameter-preview :deep(.el-card__body) {
+    padding: 8px;
+  }
+
+  .card-footer-actions {
+    justify-content: center;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .parameter-preview :deep(.el-descriptions__label) {
+    align-items: flex-start;
+  }
+
+  .parameter-preview :deep(.el-input__inner),
+  .parameter-preview :deep(.el-textarea__inner) {
+    font-size: 14px;
+  }
 }
 </style>
