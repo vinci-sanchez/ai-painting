@@ -404,9 +404,9 @@ async function generateStoryboard(text?: string) {
   flex: 1 1 320px;
 }
 
-.card--wide {
+/* .card--wide {
   min-width: 320px;
-}
+} */
 
 .card--narrow {
   max-width: 360px;

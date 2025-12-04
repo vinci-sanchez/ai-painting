@@ -82,17 +82,22 @@ const handleSelect = (index: string) => {
 </script>
 
 <style>
+/* :root {
+  --el-menu-bg-color: transparent;
+} */    
+
 .sidebar {
-  height: 100vh;
+  height: 100%;
   width: auto; /*有点bug*/
   display: flex;
-  background-color: var(--el-menu-bg-color, transparent);
+  --el-menu-bg-color:transparent;
   transition: width 0.2s ease;
   padding: 8px;
 }
 
 .sidebar-menu {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  height: 100%;
   border-radius: 16px;
   box-shadow: 0 12px 30px rgba(20, 30, 68, 0.08);
   overflow: hidden;

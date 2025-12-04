@@ -134,7 +134,7 @@ body {
 #segmentsList:empty::before,
 #panels:empty::before,
 #result:empty::before {
-  content: "快爬！！！(我好不容易突破的难题)";
+  content: "快爬！！！(我好不容易做的)";
   color: var(--secondary-color);
   font-style: italic;
 }
@@ -229,6 +229,7 @@ footer {
 }
 .page-content {
   position: relative;
+  overflow: hidden;
 }
 
 #app {

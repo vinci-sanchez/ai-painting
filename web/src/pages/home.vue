@@ -29,7 +29,8 @@ import LeftNavigation from "../components/LeftNavigation.vue";
   flex-shrink: 0;
   position: sticky;
   top: 0;
-  align-self: flex-start;
+  /* align-self: flex-start; */
+  /* align-self: stretch; height: auto; */
 }
 
 .home-layout__content {

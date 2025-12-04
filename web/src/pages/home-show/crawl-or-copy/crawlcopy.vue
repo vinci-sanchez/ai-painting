@@ -10,7 +10,7 @@
                 支持从比如 <a href="https://www.blqukk.cc/" target="_blank" rel="noopener noreferrer">https://www.blqukk.cc/</a> 爬取小说章节(因为服务器在国外，网站可能会出现404错误限制访问的情况，请酌情使用)
               </p>
               <div class="input-group mb-3 input-group--responsive">
-                <span class="input-group-text" style="max-width: 400px">
+                <span class="input-group-text" style="overflow: hidden;">
                   <i class="fas fa-link"></i>
                
                 <input
@@ -25,15 +25,18 @@
                   :min="1"
                   type="number"
                   id="index"
-                  style="width: 200px"
-                  placeholder="请输入小说章节数量"
+
+                  placeholder="请输入小说章节数"
                 >
                   <template #suffix> <span>章</span></template>
                 </el-input-number>
-                <button v-on:click="crawl" class="btn btn-primary" style="max-width: 150px;" id="crawl">
+          
+                <!-- <button v-on:click="crawl" class="btn btn-primary" style="max-width: 150px;" id="crawl">
                   <i class="fas fa-spider"></i> 开始爬取
-                </button>
+                </button>  -->
+          
               </div>
+              <el-button type="primary" v-on:click="crawl"  id="crawl" style=" border-radius: 5px;  display: block;height:35px; width: fit-content; margin-left: auto;"><i class="fas fa-spider"></i> 开爬！</el-button>
               <div
                 v-show="crawl_result"
                 id="result"
@@ -362,15 +365,15 @@ const triggerFileDialog = () => {
 }
 
 .input-group--responsive > * {
-  flex: 1 1 180px;
+  flex: 1 1 auto;
 }
 
-.input-group--responsive .form-control {
+/* .input-group--responsive .form-control {
   min-width: 220px;
-}
+} */
 
 .input-group--responsive .el-input-number {
-  width: 180px;
+  max-width: 180px;
 }
 
 .upload-dropzone {

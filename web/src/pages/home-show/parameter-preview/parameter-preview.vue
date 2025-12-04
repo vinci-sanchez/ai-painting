@@ -70,7 +70,8 @@
     </el-descriptions>
 
     <!-- 其他配置 -->
-    <el-button type="primary" @click="ConfigurationClick">其他配置</el-button>
+     
+    <el-button type="primary" @click="ConfigurationClick" style="width: 100px;display: block;height:35px; width: fit-content; margin-left: auto">其他配置</el-button>
     <el-dialog
       v-model="Configuration"
       title=" 配置(不懂默认就行)"
