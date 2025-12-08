@@ -42,6 +42,7 @@ var (
 	ErrEmptyUsername      = errors.New("username cannot be empty")
 	ErrEmptyPassword      = errors.New("password cannot be empty")
 	ErrUserNotFound       = errors.New("user does not exist")
+	ErrComicNotFound      = errors.New("comic not found")
 )
 
 // User 表示一个存储的账号信息（密码使用散列值）
@@ -305,4 +306,32 @@ func (s *UserStore) ListComicsForUser(ctx context.Context, username string) ([]C
 	}
 
 	return records, nil
+}
+
+// DeleteComicForUser removes a stored comic that belongs to the given user.
+func (s *UserStore) DeleteComicForUser(ctx context.Context, username string, comicID int64) error {
+	if comicID <= 0 {
+		return errors.New("invalid comic id")
+	}
+
+	userID, err := s.lookupUserID(ctx, username)
+	if err != nil {
+		return err
+	}
+
+	result, err := s.db.ExecContext(ctx, `
+		DELETE FROM user_comics
+		WHERE id = $1 AND user_id = $2
+	`, comicID, userID)
+	if err != nil {
+		return fmt.Errorf("删除漫画失败: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrComicNotFound
+	}
+	return nil
 }

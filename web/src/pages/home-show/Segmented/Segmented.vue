@@ -3,7 +3,7 @@
     <el-card class="card card--wide" style="min-height: 440px">
       <template #header>
         <div class="card-header">
-          <span>调整分段</span>
+          <span>文本分段</span>
         </div>
       </template>
       <!-- <p class="text item" style="height: 250px">{{ textParagraph }}</p> -->
@@ -43,7 +43,7 @@
       <div class="style-color-row">
         <div class="style-field">
           <span>风格</span>
-          <el-select v-model="style" placeholder="请选择风格" style="width: 240px">
+          <el-select v-model="style" placeholder="请选择风格">
             <el-option
               v-for="item in style_options"
               :key="item.value"
@@ -54,7 +54,7 @@
         </div>
         <div class="color-field">
           <span>颜色</span>
-          <el-select v-model="color" placeholder="请选择颜色" style="width: 240px">
+          <el-select v-model="color" placeholder="请选择颜色">
             <el-option
               v-for="item in color_options"
               :key="item.value"
@@ -69,7 +69,6 @@
       <p>
         <el-input-tag
           v-model="other_hint"
-          style="width: 240px"
           placeholder="请输入其他提示(可选)"
           aria-label="Please click the Enter key after input"
         />
@@ -80,7 +79,7 @@
           class="btn btn-outline-info"
           @click="gotoparameter_preview"
         >
-          <i class="fas fa-film"></i>提取分镜
+          <i class="fas fa-film"></i>获取预览
         </button>
       </template>
     </el-card>
@@ -120,7 +119,7 @@ type ComicInfo = {
 const props = defineProps<{ text?: string }>();
 
 const defaultParagraph =
-  "这是一个示例段落，用于展示自动分段功能。系统会在保留标点和语义的前提下，将文本按照合适的长度拆分，帮助你快速检视内容。";
+ "这是一个示例段落，用于展示自动分段功能。系统会在保留标点和语义的前提下，将文本按照合适的长度拆分，帮助你快速检视内容。";
 const textParagraph = ref(defaultParagraph);
 const segments = ref<string[]>([]);
 const currentIndex = ref(0);
@@ -188,6 +187,7 @@ function segmentText(inputText: string) {
     showSegment(0);
     return;
   }
+
 
   try {
     const cleanedText = trimmed
@@ -273,7 +273,7 @@ const emitComic = (data: {
   color?: string;
   hints?: string[];
 }) => {
-  console.log("漫画类型数据:", data);
+  console.log("漫画数据:", data);
   setComicText(comicText.value);
   bus.emit("comic-generated", data);
 };
@@ -281,14 +281,14 @@ const emitComic = (data: {
 /////跳转
 async function gotoparameter_preview() {
   if (!textParagraph.value || textParagraph.value.trim().length === 0) {
-    ElMessage.warning("请确认文本后再生成分镜");
+    ElMessage.warning("请输入有效的文本段落");
     return;
   }
   router.push({ name: "home-parameter-preview" });
   await generateStoryboard(textParagraph.value);
-  console.log("自动分镜生成完成");
+  console.log("自动跳转到参数预览页面");
 }
-/////分镜
+/////生成分镜
 async function generateStoryboard(text?: string) {
   const promptTags = document.getElementById("promptTags");
   const prompts = promptTags
@@ -304,14 +304,14 @@ async function generateStoryboard(text?: string) {
     messages: [
       {
         role: "system",
-        content: `你是一个漫画创作者。将输入文本转换为1个图片的四格漫画,要求含有场景,提示词,人物对话(格式为谁在什么时候说了什么)和人物长相(若有的话依照人物名称生成符合该人物的服饰,长相,没有就返回null);若有颜色则必须符合风格：${style.value},色调：${color.value};输出格式为纯文本,字段按以下格式:scene:...;prompt:...;dialogue:....;character:...;字段间用分号分隔，不包含换行符，用中文回答我。`,
+        content: `你是一个分镜生成助手，将输入文本转换为1个分镜图片的关键词，需要包含场景，提示语，对话，角色(格式为scene:...;prompt:...;dialogue:....;character:...;字段之间用分号隔开，内容中不要出现分号);分镜风格为${style.value},颜色为${color.value};输出格式为纯文本，字段之间格式:scene:...;prompt:...;dialogue:....;character:...;字段之间用分号隔开，内容中不要出现分号`,
       },
       { role: "user", content: text + extraPrompts },
     ],
     max_tokens: 300,
     temperature: 0.7,
   };
-  console.log("发送 /api/text 请求体:", JSON.stringify(requestBody, null, 2));
+   console.log("发送 /api/text 请求体:", JSON.stringify(requestBody, null, 2));
 
   try {
     const controller = new AbortController();
@@ -401,7 +401,7 @@ async function generateStoryboard(text?: string) {
 }
 .card--wide,
 .card--narrow {
-  flex: 1 1 320px;
+  flex: 1 1 auto;
 }
 
 /* .card--wide {

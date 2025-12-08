@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func (h *Handler) registerUserRoutes(r *gin.Engine) {
 	group.POST("/login", h.handleLoginUser)
 	group.GET("/:username/comics", h.handleListUserComics)
 	group.POST("/:username/comics", h.handleCreateUserComic)
+	group.DELETE("/:username/comics/:comicID", h.handleDeleteUserComic)
 	group.GET("/:username", h.handleGetUser)
 }
 
@@ -186,6 +188,34 @@ func (h *Handler) handleListUserComics(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"comics": comics})
+}
+
+func (h *Handler) handleDeleteUserComic(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名不能为空"})
+		return
+	}
+	comicIDStr := c.Param("comicID")
+	comicID, err := strconv.ParseInt(comicIDStr, 10, 64)
+	if err != nil || comicID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的漫画ID"})
+		return
+	}
+
+	err = h.userStore.DeleteComicForUser(c.Request.Context(), username, comicID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, storage.ErrEmptyUsername) || errors.Is(err, storage.ErrUserNotFound) {
+			status = http.StatusNotFound
+		} else if errors.Is(err, storage.ErrComicNotFound) {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "漫画已删除"})
 }
 
 func (h *Handler) fetchImageAsBase64(ctx context.Context, imageURL string) (string, error) {

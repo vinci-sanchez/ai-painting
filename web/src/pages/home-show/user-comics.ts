@@ -134,3 +134,25 @@ export const saveComicForCurrentUser = async (
   userComicsRef.value = [normalized, ...userComicsRef.value];
   return normalized;
 };
+
+export const deleteComicForCurrentUser = async (comicId: number) => {
+  const username = currentUser.value?.username?.trim();
+  if (!username) {
+    throw new Error("用户未登录");
+  }
+  if (!comicId || comicId <= 0) {
+    throw new Error("漫画ID无效");
+  }
+
+  const response = await fetch(
+    `${BACK_URL}/api/users/${encodeURIComponent(username)}/comics/${comicId}`,
+    { method: "DELETE" }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "删除漫画失败");
+  }
+  userComicsRef.value = userComicsRef.value.filter(
+    (comic) => comic.id !== comicId
+  );
+};

@@ -466,14 +466,22 @@
 //   }
 // }
 
-
 ///激活render
+import { ElMessage, ElMessageBox } from "element-plus";
 async function ping() {
   try {
     await fetch("https://ai-painting.onrender.com/");
     console.log("Ping success");
+    ElMessage({
+      message: "服务器冷启动成功",
+      type: "success",
+    });
   } catch (err) {
     console.log("Ping failed:", err);
+    ElMessage({
+      message: "服务器冷启动失败，请联系管理员",
+      type: "error",
+    });
   }
 }
 
@@ -482,10 +490,6 @@ setInterval(ping, 10 * 60 * 1000);
 
 // 页面打开后立即 ping 一次
 ping();
-
-
-
-
 
 ///背景文字
 import config from "./config.js";

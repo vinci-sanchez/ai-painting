@@ -39,15 +39,20 @@
                     仪表盘
                   </button>
                 </div>
-                <div class="hover-menu__item">
-                  <button class="hover-menu__btn" @click="go('/login')">
-                    登录
-                  </button>
-                </div>
-                <div class="hover-menu__item">
-                  <button class="hover-menu__btn" @click="go('/signup')">
-                    注册
-                  </button>
+                <template v-if="!isLoggedIn">
+                  <div class="hover-menu__item">
+                    <button class="hover-menu__btn" @click="go('/login')">
+                      登录
+                    </button>
+                  </div>
+                  <div class="hover-menu__item">
+                    <button class="hover-menu__btn" @click="go('/signup')">
+                      注册
+                    </button>
+                  </div>
+                </template>
+                <div v-else class="hover-menu__item">
+                  <button class="hover-menu__btn" @click="logout">登出</button>
                 </div>
               </div>
             </transition>
@@ -84,7 +89,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { currentUser } from "../pages/home-show/auth-user";
+import { clearAuthUser, currentUser } from "../pages/home-show/auth-user";
 
 const menuOpen = ref(false);
 const router = useRouter();
@@ -94,6 +99,11 @@ const isLoggedIn = computed(() => Boolean(username.value));
 function go(target) {
   menuOpen.value = false;
   router.push(target);
+}
+
+function logout() {
+  clearAuthUser();
+  go("/login");
 }
 </script>
 

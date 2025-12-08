@@ -7,9 +7,9 @@
       :size="size"
       border
     >
-      <template #extra>
+      <!-- <template #extra>
         <el-button type="primary">Operation</el-button>
-      </template>
+      </template> -->
       <el-descriptions-item>
         <template #label>
           <div class="cell-item">
@@ -70,8 +70,30 @@
     </el-descriptions>
 
     <!-- 其他配置 -->
-     
-    <el-button type="primary" @click="ConfigurationClick" style="width: 100px;display: block;height:35px; width: fit-content; margin-left: auto">其他配置</el-button>
+    <div class="parameter-actions">
+      <el-button
+        type="primary"
+        @click="ConfigurationClick"
+        style="
+          width: 100px;
+          display: block;
+          height: 35px;
+          width: fit-content;
+        "
+        >其他配置</el-button
+      >
+      <el-button
+        type="primary"
+        @click="UploadImg"
+        style="
+          width: 100px;
+          display: block;
+          height: 35px;
+          width: fit-content;
+        "
+        >上传图像</el-button
+      >
+    </div>
     <el-dialog
       v-model="Configuration"
       title=" 配置(不懂默认就行)"
@@ -92,7 +114,54 @@
         </el-form-item>
       </el-form>
     </el-dialog>
-
+      <el-dialog
+        v-model="uploadDialogVisible"
+        title="上传图像"
+        :width="dialogWidth"
+      >
+        <div class="upload-dialog-content">
+   
+          <div class="upload-section">
+        
+            <el-upload
+              class="upload-block"
+              drag
+              :auto-upload="false"
+              action=""
+              accept="image/*"
+              :file-list="uploadFiles"
+              :on-change="handleUploadChange"
+              :on-remove="handleUploadRemove"
+            >
+              <el-icon class="upload-icon"><UploadFilled /></el-icon>
+              <div class="el-upload__text">
+                将文件拖到此处，或 <em>点击上传</em>
+              </div>
+              <template #tip>
+                <div class="el-upload__tip">仅用于参考展示，当前不会上传到服务器</div>
+              </template>
+            </el-upload>
+            <div v-if="uploadPreview" class="upload-preview">
+              <img :src="uploadPreview" alt="预览图" />
+            </div>
+          </div>
+          <div class="upload-section">
+            <h6>图像介绍</h6>
+            <el-input
+              v-model="uploadDescription"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 6 }"
+              placeholder="请输入对参考图像的简要说明，图为人物长相或其他信息"
+            />
+          </div>
+        </div>
+        <template #footer>
+          <div class="dialog-footer">
+            <el-button @click="uploadDialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="handleUploadConfirm">完 成</el-button>
+          </div>
+        </template>
+      </el-dialog>
     <div
       v-loading="loading"
       element-loading-text="巴拉巴拉生成中..."
@@ -126,6 +195,8 @@
       </el-descriptions>
 
       <p>分镜内容</p>
+ 
+       
       <h6>场景</h6>
       <el-input
         v-model="scene"
@@ -158,6 +229,7 @@
 defineOptions({ name: "parameter-preview" });
 import { computed, ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { ElMessage } from "element-plus";
+import type { UploadProps, UploadUserFile } from "element-plus";
 import bus from "../eventbus.js";
 import { currentUser } from "../auth-user";
 import {
@@ -166,6 +238,7 @@ import {
   OfficeBuilding,
   Tickets,
   User,
+  UploadFilled,
 } from "@element-plus/icons-vue";
 import {
   setComicText,
@@ -232,7 +305,9 @@ const promptSegments = computed(() =>
     .filter(Boolean)
 );
 /////自定义配置
-const UPDATE_IMAGE_MODEL = ref(config.IMAGE_MODEL);
+const UPDATE_IMAGE_MODEL = ref(
+  config.IMAGE_TO_IMAGE_MODEL || config.TEXT_TO_IMAGE_MODEL
+);
 const UPDATE_BASE_URL = ref(API_BASE_URL);
 const UPDATE_API_KEY = ref("");
 /////分镜接受
@@ -310,6 +385,27 @@ const buildParametersForPage = (): ComicParameterDraft => ({
   color: color.value,
   customTags: [...customTags.value],
 });
+
+const buildMetadataForComic = (
+  parameters: ComicParameterDraft,
+  imageUrl: string
+) => {
+  const storyboard = {
+    title: parameters.title ?? "",
+    scene: parameters.scene ?? "",
+    prompt: parameters.prompt ?? "",
+    dialogue: parameters.dialogue ?? "",
+    character: parameters.character ?? "",
+    style: parameters.style ?? "",
+    color: parameters.color ?? "",
+    customTags: [...(parameters.customTags ?? [])],
+  };
+  return {
+    parameters,
+    image_url: imageUrl,
+    storyboard,
+  };
+};
 //////监听
 onMounted(() => {
   updateResponsiveState();
@@ -354,6 +450,12 @@ const Configuration = ref(false);
 const descriptionColumns = ref(3);
 const isCompactScreen = ref(false);
 const dialogWidth = computed(() => (isCompactScreen.value ? "96vw" : "500px"));
+const uploadDialogVisible = ref(false);
+const uploadFiles = ref<UploadUserFile[]>([]);
+const uploadPreview = ref("");
+const uploadDescription = ref("");
+const uploadImageBase64 = ref("");
+const uploadImageType = ref("");
 const ConfigurationClick = async () => {
   Configuration.value = true;
 };
@@ -374,9 +476,60 @@ const updateResponsiveState = () => {
     descriptionColumns.value = 3;
   }
 };
+
+/////////////////////上传图片
+function UploadImg() {
+  uploadDialogVisible.value = true;
+}
+
+const handleUploadChange: UploadProps["onChange"] = (_, files) => {
+  uploadFiles.value = [...files];
+  const latest = files[files.length - 1];
+  if (latest?.raw) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      uploadPreview.value = result;
+      if (result) {
+        const match = result.match(/^data:(.+);base64,(.+)$/);
+        if (match) {
+          const mime = match[1];
+          const typePart =
+            mime.split("/")[1]?.split(";")[0]?.toLowerCase() || "png";
+          uploadImageType.value = typePart;
+          uploadImageBase64.value = match[2];
+        } else {
+          uploadImageType.value = "";
+          uploadImageBase64.value = "";
+        }
+      }
+    };
+    reader.readAsDataURL(latest.raw);
+  }
+};
+
+const handleUploadRemove: UploadProps["onRemove"] = (_, files) => {
+  uploadFiles.value = [...files];
+  if (!files.length) {
+    uploadPreview.value = "";
+    uploadImageBase64.value = "";
+    uploadImageType.value = "";
+  }
+};
+
+const handleUploadConfirm = () => {
+  if (uploadImageBase64.value && !uploadDescription.value.trim()) {
+    ElMessage.warning("请填写图像介绍");
+    return;
+  }
+  uploadDescription.value = uploadDescription.value.trim();
+  uploadDialogVisible.value = false;
+};
+
 //////////////////////////////////////url转base64
 const last_image = "";
 const last_image_type = "";
+
 function urlToBase64(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -461,15 +614,13 @@ async function goGenerateComic() {
       try {
         const base64 = await imageUrlToBase64(result.image_url);
         payload.imageBase64 = base64;
+        const metadata = buildMetadataForComic(parameters, result.image_url);
         const saved = await saveComicForCurrentUser({
           title: payload.title,
           pageNumber: payload.page_id,
           imageBase64: base64,
           imageUrl: result.image_url,
-          metadata: {
-            parameters,
-            image_url: result.image_url,
-          },
+          metadata,
         });
         if (saved) {
           bus.emit("comic-persisted", {
@@ -479,14 +630,12 @@ async function goGenerateComic() {
         }
       } catch (error) {
         console.error("Failed to persist comic", error);
+        const metadata = buildMetadataForComic(parameters, result.image_url);
         const saved = await saveComicForCurrentUser({
           title: payload.title,
           pageNumber: payload.page_id,
           imageUrl: result.image_url,
-          metadata: {
-            parameters,
-            image_url: result.image_url,
-          },
+          metadata,
         }).catch((err) => {
           console.error("Server side base64 conversion failed", err);
           return null;
@@ -517,7 +666,7 @@ async function generateImage(ComicData: ComicData) {
   console.log("发送 /api/image 请求");
   console.log("图像生成输入数据:", ComicData);
   const targetBaseUrl = (UPDATE_BASE_URL.value || "").trim();
-  const requestBody = {
+  const requestBody: Record<string, unknown> = {
     apiKey: (UPDATE_API_KEY.value || "").trim(),
     baseUrl: targetBaseUrl,
     model: UPDATE_IMAGE_MODEL.value,
@@ -527,11 +676,22 @@ async function generateImage(ComicData: ComicData) {
     创作一个包含场景:${scene.value}，
     剧情为${prompt.value}，人物:${character.value},人物对白:${
       dialogue.value
-    }的四格漫画，若有颜色形容词则必须按照${style.value}风格，
+    }的一个极具创意的漫画页面排版，自由构图，非网格化布局，人物和背景元素跨越多个分镜格，复杂的页面设计；若有颜色形容词则必须按照${
+      style.value
+    }风格，
     ${color.value}色调来绘制，(比如若色调为黑白则必须为黑白，不可有多余的色彩)`,
-    image: `data:image/${last_image_type};base64,${last_image}`,
     role: "user",
   };
+  if (uploadImageBase64.value && uploadImageType.value) {
+    requestBody.image = `data:image/${uploadImageType.value};base64,${uploadImageBase64.value}`;
+    const desc = uploadDescription.value.trim();
+    if (desc) {
+      requestBody.image_description = desc;
+    }
+  } else if (last_image && last_image_type) {
+    requestBody.image = `data:image/${last_image_type};base64,${last_image}`;
+  }
+
   console.log("请求体内容:", requestBody);
   const response: Response = await fetch(`${BACK_URL}/api/image`, {
     method: "POST",
@@ -612,6 +772,15 @@ defineProps<{ text?: string }>();
 .parameter-preview :deep(.el-descriptions__cell) {
   word-break: break-word;
 }
+
+.parameter-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .card-footer-actions {
   display: flex;
   justify-content: flex-end;
@@ -634,9 +803,48 @@ defineProps<{ text?: string }>();
     align-items: flex-start;
   }
 
-  .parameter-preview :deep(.el-input__inner),
-  .parameter-preview :deep(.el-textarea__inner) {
-    font-size: 14px;
-  }
+.parameter-preview :deep(.el-input__inner),
+.parameter-preview :deep(.el-textarea__inner) {
+  font-size: 14px;
+}
+}
+
+.upload-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.upload-dialog-tip {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+}
+
+.upload-section h6 {
+  margin: 0 0 8px;
+}
+
+.upload-block {
+  width: 100%;
+}
+
+.upload-preview {
+  margin-top: 12px;
+  border: 1px dashed var(--el-border-color);
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.upload-preview img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>

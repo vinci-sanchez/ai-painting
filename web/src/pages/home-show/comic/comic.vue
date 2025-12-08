@@ -16,7 +16,23 @@
             :key="comicPage.id"
             :index="comicPage.id.toString()"
           >
-            第{{ formatPageOrder(comicPage) }}页: {{ comicPage.title }}
+            <div class="comic-menu-item">
+              <span class="comic-menu-item__title">
+                第{{ formatPageOrder(comicPage) }}页: {{ comicPage.title }}
+              </span>
+              <el-button
+                v-if="canDeleteComic(comicPage)"
+                class="comic-menu-item__delete"
+                type="danger"
+                link
+                size="small"
+                :loading="isDeletingComic(comicPage.id)"
+                :title="`删除${comicPage.title}`"
+                @click.stop="confirmDeleteComic(comicPage)"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
           </el-menu-item>
         </el-menu>
         <el-empty
@@ -127,7 +143,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
 import QRCode from "qrcode";
 import type { ImageProps } from "element-plus";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import bus from "../eventbus.js";
 import { setParameterDraft } from "../shared-text";
 import type { ParameterDraft } from "../shared-text";
@@ -136,6 +152,7 @@ import { currentUser } from "../auth-user";
 import {
   refreshUserComics,
   userComics,
+  deleteComicForCurrentUser,
 } from "../user-comics";
 import type { StoredComic } from "../user-comics";
 
@@ -246,6 +263,7 @@ const sessionPages = ref<ComicPage[]>([]);
 const comicPages = ref<ComicPage[]>([]);
 const activePageId = ref("");
 const pageRefs = ref<Partial<Record<string, HTMLElement>>>({});
+const deletingComicIds = ref<Record<string, boolean>>({});
 
 const setPageRef = (el: HTMLElement | null, id: number) => {
   const key = id.toString();
@@ -279,15 +297,72 @@ const extractParameters = (
   if (!metadata) {
     return undefined;
   }
-  const raw = metadata ? metadata["parameters"] : undefined;
-  if (!raw || typeof raw !== "object") {
-    return undefined;
+
+  const toRecord = (value: unknown): Record<string, unknown> | undefined => {
+    if (!value || typeof value !== "object") {
+      return undefined;
+    }
+    return value as Record<string, unknown>;
+  };
+
+  const buildDraftFromSources = (
+    ...sources: Array<Record<string, unknown> | undefined>
+  ): ParameterDraft | undefined => {
+    const draft: ParameterDraft = {};
+    let hasValue = false;
+    const assignString = (
+      key: Exclude<keyof ParameterDraft, "customTags">,
+      value: unknown
+    ) => {
+      if (typeof value === "string") {
+        draft[key] = value;
+        hasValue = true;
+      }
+    };
+    const assignTags = (value: unknown) => {
+      if (!Array.isArray(value)) {
+        return;
+      }
+      const tags = value.filter((item): item is string => typeof item === "string");
+      draft.customTags = [...tags];
+      hasValue = true;
+    };
+
+    sources.forEach((source) => {
+      if (!source) {
+        return;
+      }
+      assignString("title", source["title"]);
+      assignString("scene", source["scene"]);
+      assignString("prompt", source["prompt"]);
+      assignString("dialogue", source["dialogue"]);
+      assignString("character", source["character"]);
+      assignString("style", source["style"]);
+      assignString("color", source["color"]);
+      assignTags(source["customTags"]);
+      if (!source["customTags"]) {
+        assignTags(source["hints"]);
+      }
+    });
+
+    if (!hasValue) {
+      return undefined;
+    }
+    if (Array.isArray(draft.customTags)) {
+      draft.customTags = [...draft.customTags];
+    }
+    return draft;
+  };
+
+  const fromParameters = buildDraftFromSources(toRecord(metadata["parameters"]));
+  if (fromParameters) {
+    return fromParameters;
   }
-  const result = { ...(raw as ParameterDraft) };
-  if (Array.isArray(result.customTags)) {
-    result.customTags = [...result.customTags];
-  }
-  return result;
+
+  const storyboard = toRecord(metadata["storyboard"]);
+  const legacyPayload = toRecord(metadata["StoryboardPayload"]);
+  const legacyMeta = toRecord(metadata["StoryboardMetaPayload"]);
+  return buildDraftFromSources(storyboard, legacyPayload, legacyMeta);
 };
 
 const syncComicPages = () => {
@@ -479,6 +554,54 @@ const saveShareQr = () => {
 
 const formatPageOrder = (page: ComicPage) =>
   typeof page.pageNumber === "number" ? page.pageNumber : Math.abs(page.id);
+
+const canDeleteComic = (page: ComicPage) => page.id > 0;
+const isDeletingComic = (pageId: number) =>
+  Boolean(deletingComicIds.value[pageId.toString()]);
+
+const setDeletingState = (pageId: number, state: boolean) => {
+  const key = pageId.toString();
+  if (state) {
+    deletingComicIds.value = { ...deletingComicIds.value, [key]: true };
+  } else {
+    const { [key]: _omit, ...rest } = deletingComicIds.value;
+    deletingComicIds.value = rest;
+  }
+};
+
+const confirmDeleteComic = async (page: ComicPage) => {
+  if (!canDeleteComic(page) || isDeletingComic(page.id)) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确认删除《${page.title}》吗？删除后无法恢复`,
+      "删除漫画",
+      {
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+  } catch {
+    return;
+  }
+  await handleDeleteComic(page);
+};
+
+const handleDeleteComic = async (page: ComicPage) => {
+  setDeletingState(page.id, true);
+  try {
+    await deleteComicForCurrentUser(page.id);
+    ElMessage.success("漫画已删除");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "删除漫画失败，请稍后重试";
+    ElMessage.error(message);
+  } finally {
+    setDeletingState(page.id, false);
+  }
+};
 </script>
 
 <style scoped>
@@ -501,6 +624,25 @@ const formatPageOrder = (page: ComicPage) =>
 .comic-menu {
   border-right: none;
   border-left: none;
+}
+
+.comic-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.comic-menu-item__title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comic-menu-item__delete {
+  flex-shrink: 0;
 }
 
 .sidebar-empty {
