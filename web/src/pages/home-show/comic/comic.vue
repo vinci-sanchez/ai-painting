@@ -98,7 +98,7 @@
         </el-dialog>
         <!-- 漫画面板 -->
         <div
-          v-loading="loading"
+          v-loading="loading && !comicPages.length"
           element-loading-text="巴拉巴拉生成中..."
           :element-loading-spinner="svg"
           element-loading-svg-view-box="-10, -10, 50, 50"
@@ -222,7 +222,7 @@ const handleShareClick = async () => {
 
 const generateShareComic = async () => {
   if (SharecomicLoading.value) return;
-  const targetUrl = currentComicImage.value;
+  const targetUrl = "https://ai-painting.pages.dev/#/welcome";//currentComicImage.value;
   if (!targetUrl) {
     Sharecomic.value = "";
     return;

@@ -28,7 +28,7 @@
             <button class="navbar-toggler" type="button" aria-label="????">
               <span class="navbar-toggler-icon"></span>
             </button>
-            <!-- hover ?????????? -->
+            
             <transition name="fade-slide">
               <div v-show="menuOpen" class="hover-menu">
                 <div class="hover-menu__item">
