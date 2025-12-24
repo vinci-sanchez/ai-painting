@@ -1,5 +1,5 @@
 <template>
-  <h2>漫画列表</h2>
+  <!-- <h2>漫画列表</h2> -->
   <el-container class="comic-layout">
     <el-aside width="220px" class="comic-sidebar">
       <el-card shadow="never">
@@ -134,13 +134,17 @@
             </el-button>
           </div>
         </div>
+        <el-divider />
+        <p class="share-hint">
+          作品保存完成后会自动进入分享池，仅需填写标题即可；留言互动功能已移至“示例漫画”页面。
+        </p>
       </el-card>
     </el-main>
   </el-container>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, watch, reactive } from "vue";
 import QRCode from "qrcode";
 import type { ImageProps } from "element-plus";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -164,6 +168,10 @@ type ComicPage = {
   pageNumber?: number;
   sourceUrl?: string;
   tempId?: number;
+  isShared?: boolean;
+  shareMessage?: string;
+  likesCount?: number;
+  commentsCount?: number;
 };
 type ComicPayload = {
   url: string;
@@ -196,6 +204,9 @@ const showPage = ref<ComicPage>({
   id: 1,
   title: "示例漫画页",
   images: "<img src='https://example.com/comic1.jpg' />",
+  likesCount: 0,
+  commentsCount: 0,
+  shareMessage: "",
 });
 const SharePanel = ref(false);
 const Sharecomic = ref("");
@@ -288,6 +299,10 @@ const normalizeStoredComic = (record: StoredComic): ComicPage => {
     pageNumber: record.pageNumber,
     sourceUrl,
     parameters,
+    isShared: record.isShared,
+    shareMessage: record.shareMessage,
+    likesCount: record.likesCount,
+    commentsCount: record.commentsCount,
   };
 };
 
@@ -386,6 +401,7 @@ const syncComicPages = () => {
   showPage.value = first;
 };
 
+
 watch(userComics, syncComicPages, { immediate: true, deep: true });
 watch(
   sessionPages,
@@ -428,6 +444,10 @@ function Show_comic(payload: unknown) {
             : [],
         }
       : undefined,
+    isShared: false,
+    shareMessage: "",
+    likesCount: 0,
+    commentsCount: 0,
   };
   sessionPages.value = [newPage, ...sessionPages.value];
   activePageId.value = newPage.id.toString();
@@ -602,6 +622,7 @@ const handleDeleteComic = async (page: ComicPage) => {
     setDeletingState(page.id, false);
   }
 };
+
 </script>
 
 <style scoped>
@@ -755,6 +776,14 @@ const handleDeleteComic = async (page: ComicPage) => {
 .share-section-desc {
   font-size: 12px;
   color: #909399;
+}
+
+.share-hint {
+  margin-top: 24px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
 }
 
 @media (max-width: 960px) {

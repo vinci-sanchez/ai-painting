@@ -13,6 +13,10 @@ export type StoredComic = {
   imageBase64: string;
   metadata: Record<string, unknown> | null;
   createdAt: string;
+  isShared: boolean;
+  shareMessage: string;
+  likesCount: number;
+  commentsCount: number;
 };
 
 const userComicsRef = ref<StoredComic[]>([]);
@@ -28,6 +32,10 @@ type RawComicResponse = {
   image_base64: string;
   metadata?: unknown;
   created_at: string;
+  is_shared?: boolean;
+  share_message?: string;
+  likes_count?: number;
+  comments_count?: number;
 };
 
 const parseMetadata = (
@@ -58,6 +66,19 @@ const normalizeComic = (payload: RawComicResponse): StoredComic => {
     imageBase64: payload.image_base64,
     metadata: parseMetadata(payload.metadata),
     createdAt: payload.created_at,
+    isShared: Boolean(payload.is_shared),
+    shareMessage:
+      typeof payload.share_message === "string"
+        ? payload.share_message
+        : "",
+    likesCount:
+      typeof payload.likes_count === "number" && payload.likes_count >= 0
+        ? payload.likes_count
+        : 0,
+    commentsCount:
+      typeof payload.comments_count === "number" && payload.comments_count >= 0
+        ? payload.comments_count
+        : 0,
   };
 };
 
@@ -100,6 +121,8 @@ type SaveComicPayload = {
   imageBase64?: string;
   imageUrl?: string;
   metadata?: Record<string, unknown>;
+  isShared?: boolean;
+  shareMessage?: string;
 };
 
 export const saveComicForCurrentUser = async (
@@ -123,6 +146,8 @@ export const saveComicForCurrentUser = async (
         image_base64: payload.imageBase64 ?? "",
         image_url: payload.imageUrl ?? "",
         metadata: payload.metadata ?? {},
+        is_shared: payload.isShared ?? false,
+        share_message: payload.shareMessage ?? "",
       }),
     }
   );
@@ -155,4 +180,127 @@ export const deleteComicForCurrentUser = async (comicId: number) => {
   userComicsRef.value = userComicsRef.value.filter(
     (comic) => comic.id !== comicId
   );
+};
+
+type ShareUpdatePayload = {
+  comicId: number;
+  isShared: boolean;
+  shareMessage: string;
+};
+
+export const updateComicShareForCurrentUser = async (
+  payload: ShareUpdatePayload
+) => {
+  const username = currentUser.value?.username?.trim();
+  if (!username) {
+    throw new Error("用户未登录");
+  }
+  const response = await fetch(
+    `${BACK_URL}/api/users/${encodeURIComponent(username)}/comics/${
+      payload.comicId
+    }/share`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_shared: payload.isShared,
+        share_message: payload.shareMessage,
+      }),
+    }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.comic) {
+    throw new Error(data?.error || "更新分享设置失败");
+  }
+  const updated = normalizeComic(data.comic as RawComicResponse);
+  userComicsRef.value = userComicsRef.value.map((comic) =>
+    comic.id === updated.id ? updated : comic
+  );
+  return updated;
+};
+
+export const likeComic = async (comicId: number) => {
+  if (!comicId) {
+    throw new Error("无效的漫画ID");
+  }
+  const response = await fetch(`${BACK_URL}/api/comics/${comicId}/like`, {
+    method: "POST",
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "点赞失败");
+  }
+  return typeof data.likes === "number" ? data.likes : 0;
+};
+
+export type ComicComment = {
+  id: number;
+  comicId: number;
+  author: string;
+  content: string;
+  createdAt: string;
+};
+
+export const fetchComicComments = async (
+  comicId: number
+): Promise<ComicComment[]> => {
+  if (!comicId) {
+    return [];
+  }
+  const response = await fetch(`${BACK_URL}/api/comics/${comicId}/comments`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "无法获取留言");
+  }
+  const list = Array.isArray(data?.comments) ? data.comments : [];
+  return list.map((item: Record<string, unknown>) => ({
+    id: Number(item.id) || Date.now(),
+    comicId: Number(item.comic_id) || comicId,
+    author: typeof item.author === "string" ? item.author : "游客",
+    content: typeof item.content === "string" ? item.content : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+  }));
+};
+
+export const addComicComment = async (
+  comicId: number,
+  payload: { author?: string; content: string }
+): Promise<ComicComment> => {
+  if (!comicId) {
+    throw new Error("无效的漫画ID");
+  }
+  const response = await fetch(`${BACK_URL}/api/comics/${comicId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      author: payload.author ?? "游客",
+      content: payload.content,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.comment) {
+    throw new Error(data?.error || "留言失败");
+  }
+  const item = data.comment as Record<string, unknown>;
+  return {
+    id: Number(item.id) || Date.now(),
+    comicId: Number(item.comic_id) || comicId,
+    author: typeof item.author === "string" ? item.author : "游客",
+    content: typeof item.content === "string" ? item.content : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+  };
+};
+
+export const fetchFeaturedComics = async (
+  limit = 5
+): Promise<StoredComic[]> => {
+  const response = await fetch(
+    `${BACK_URL}/api/comics/shared/featured?limit=${limit}`
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "无法获取分享漫画");
+  }
+  const comics = Array.isArray(data?.comics) ? data.comics : [];
+  return comics.map((item: RawComicResponse) => normalizeComic(item));
 };

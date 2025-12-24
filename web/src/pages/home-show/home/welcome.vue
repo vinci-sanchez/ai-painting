@@ -37,17 +37,110 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <section class="sample-comics card shadow-sm">
+      <div class="sample-comics__header">
+        <div>
+          <h3>示例漫画</h3>
+          <p class="sample-comics__sub">
+            来自其他人分享的漫画
+          </p>
+        </div>
+        <el-button type="text" @click="goTo('home-sample-gallery')">
+          查看全部
+        </el-button>
+      </div>
+      <el-skeleton
+        v-if="sampleLoading"
+        :rows="4"
+        animated
+        class="sample-comics__skeleton"
+      />
+      <el-empty
+        v-else-if="!sampleComics.length"
+        description="还没有分享的漫画"
+      />
+      <el-row v-else :gutter="16">
+        <el-col
+          v-for="sample in sampleComics"
+          :key="sample.id"
+          :xs="24"
+          :sm="12"
+          :md="8"
+        >
+          <el-card shadow="hover" class="sample-card">
+            <div class="sample-card__cover">
+              <img :src="resolveCover(sample)" :alt="sample.title" />
+              <el-tag
+                :type="sample.isShared ? 'success' : 'info'"
+                effect="dark"
+                class="sample-card__badge"
+              >
+                {{ sample.isShared ? "已分享" : "未分享" }}
+              </el-tag>
+            </div>
+            <div class="sample-card__body">
+              <h4>{{ sample.title }}</h4>
+              <p class="sample-card__highlight">
+                {{ sample.shareMessage || "创作者暂未填写副标题" }}
+              </p>
+              <div class="sample-card__meta">
+                <el-tag size="small" effect="plain" type="success">
+                  {{ sample.likesCount }} 喜欢
+                </el-tag>
+                <el-tag size="small" effect="plain" type="info">
+                  {{ sample.commentsCount }} 留言
+                </el-tag>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import { fetchFeaturedComics, type StoredComic } from "../user-comics";
 
 const router = useRouter();
 
 const goTo = (name: string) => {
   router.push({ name });
 };
+
+const sampleComics = ref<StoredComic[]>([]);
+const sampleLoading = ref(false);
+
+const loadSampleComics = async () => {
+  sampleLoading.value = true;
+  try {
+    sampleComics.value = await fetchFeaturedComics(5);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "无法获取分享漫画";
+    ElMessage.error(message);
+    sampleComics.value = [];
+  } finally {
+    sampleLoading.value = false;
+  }
+};
+
+const resolveCover = (comic: StoredComic) => {
+  if (comic.imageBase64) {
+    return comic.imageBase64;
+  }
+  const meta = comic.metadata as Record<string, unknown> | null;
+  if (meta && typeof meta["image_url"] === "string") {
+    return meta["image_url"] as string;
+  }
+  return "https://picsum.photos/seed/welcome/600/360";
+};
+
+onMounted(loadSampleComics);
 
 const features = [
   {
@@ -147,6 +240,80 @@ const steps = [
 }
 .welcome__steps h4 {
   margin: 0 0 4px;
+}
+
+.sample-comics {
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--el-bg-color);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sample-comics__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sample-comics__sub {
+  margin: 4px 0 0;
+  color: var(--el-text-color-secondary);
+}
+
+.sample-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sample-card__cover {
+  position: relative;
+}
+
+.sample-card__cover img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.sample-card__badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.sample-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.sample-card__highlight {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
+.sample-card__message {
+  margin: 0;
+  font-size: 13px;
+}
+
+.sample-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.sample-card__stat {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 
 @media (max-width: 960px) {

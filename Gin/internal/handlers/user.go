@@ -22,11 +22,18 @@ type userCredentialsRequest struct {
 }
 
 type userComicRequest struct {
-	Title       string                 `json:"title" binding:"required"`
-	PageNumber  int                    `json:"page_number"`
-	ImageBase64 string                 `json:"image_base64"`
-	ImageURL    string                 `json:"image_url"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	Title        string                 `json:"title" binding:"required"`
+	PageNumber   int                    `json:"page_number"`
+	ImageBase64  string                 `json:"image_base64"`
+	ImageURL     string                 `json:"image_url"`
+	Metadata     map[string]interface{} `json:"metadata"`
+	IsShared     bool                   `json:"is_shared"`
+	ShareMessage string                 `json:"share_message"`
+}
+
+type comicShareRequest struct {
+	IsShared     bool   `json:"is_shared"`
+	ShareMessage string `json:"share_message"`
 }
 
 func (h *Handler) registerUserRoutes(r *gin.Engine) {
@@ -36,6 +43,7 @@ func (h *Handler) registerUserRoutes(r *gin.Engine) {
 	group.GET("/:username/comics", h.handleListUserComics)
 	group.POST("/:username/comics", h.handleCreateUserComic)
 	group.DELETE("/:username/comics/:comicID", h.handleDeleteUserComic)
+	group.PATCH("/:username/comics/:comicID/share", h.handleUpdateComicShare)
 	group.GET("/:username", h.handleGetUser)
 }
 
@@ -150,10 +158,12 @@ func (h *Handler) handleCreateUserComic(c *gin.Context) {
 		c.Request.Context(),
 		username,
 		storage.ComicRecord{
-			Title:       req.Title,
-			PageNumber:  req.PageNumber,
-			ImageBase64: imageBase64,
-			Metadata:    metadata,
+			Title:        req.Title,
+			PageNumber:   req.PageNumber,
+			ImageBase64:  imageBase64,
+			Metadata:     metadata,
+			IsShared:     req.IsShared,
+			ShareMessage: strings.TrimSpace(req.ShareMessage),
 		},
 	)
 	if err != nil {
@@ -216,6 +226,45 @@ func (h *Handler) handleDeleteUserComic(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "漫画已删除"})
+}
+
+func (h *Handler) handleUpdateComicShare(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名不能为空"})
+		return
+	}
+
+	comicIDStr := c.Param("comicID")
+	comicID, err := strconv.ParseInt(comicIDStr, 10, 64)
+	if err != nil || comicID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的漫画ID"})
+		return
+	}
+
+	var req comicShareRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请输入完整的分享信息"})
+		return
+	}
+
+	record, err := h.userStore.UpdateComicShareForUser(
+		c.Request.Context(),
+		username,
+		comicID,
+		req.IsShared,
+		strings.TrimSpace(req.ShareMessage),
+	)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, storage.ErrEmptyUsername) || errors.Is(err, storage.ErrUserNotFound) || errors.Is(err, storage.ErrComicNotFound) {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"comic": record})
 }
 
 func (h *Handler) fetchImageAsBase64(ctx context.Context, imageURL string) (string, error) {

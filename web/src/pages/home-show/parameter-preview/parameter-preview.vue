@@ -621,6 +621,7 @@ async function goGenerateComic() {
           imageBase64: base64,
           imageUrl: result.image_url,
           metadata,
+          isShared: true,
         });
         if (saved) {
           bus.emit("comic-persisted", {
@@ -636,6 +637,7 @@ async function goGenerateComic() {
           pageNumber: payload.page_id,
           imageUrl: result.image_url,
           metadata,
+          isShared: true,
         }).catch((err) => {
           console.error("Server side base64 conversion failed", err);
           return null;

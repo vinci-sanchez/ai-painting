@@ -8,6 +8,7 @@ import ParameterPreview from "./pages/home-show/parameter-preview/parameter-prev
 import Comic from "./pages/home-show/comic/comic.vue";
 import Welcome from "./pages/home-show/home/welcome.vue";
 import ReadBook from "./pages/home-show/11/ReadBook.vue";
+import SampleGallery from "./pages/home-show/sample/sample-gallery.vue";
 
 const routes = [
   {
@@ -24,6 +25,7 @@ const routes = [
         component: ParameterPreview,
       },
       { path: "comic", name: "home-comic", component: Comic },
+      { path: "sample", name: "home-sample-gallery", component: SampleGallery },
       { path: "11", name: "home-readbook", component: ReadBook },
     ],
   },

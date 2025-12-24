@@ -166,7 +166,7 @@ func (s *Service) crawlChapterList(novelURL string) ([]string, error) {
 		fullURL := s.resolveURL(baseURL, href)
 		if strings.Contains(fullURL, novelID) && strings.HasSuffix(fullURL, ".html") {
 			chapters = append(chapters, fullURL)
-			log.Printf("找到章节链接: %s (标题: %s)", fullURL, e.Text)
+			//log.Printf("找到章节链接: %s (标题: %s)", fullURL, e.Text)
 		}
 	})
 

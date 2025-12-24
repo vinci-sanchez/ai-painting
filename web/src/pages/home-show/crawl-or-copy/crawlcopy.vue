@@ -183,10 +183,9 @@ function finishTask(input?: string) {
 async function crawl() {
   const urlInput = document.getElementById("novelUrl") as HTMLInputElement;
   const resultDiv = document.getElementById("result");
-  const errorMessage = document.getElementById("error-message");
 
   if (!urlInput || !urlInput.value) {
-    ElMessage("请输入有效的 URL");
+    ElMessage.warning("请输入有效的 URL");
     return;
   }
   try {
@@ -206,27 +205,22 @@ async function crawl() {
 
     if (!response.ok) {
       if (resultDiv) {
-        resultDiv.innerHTML += `<h3>HTTP Error</h3><p>Received status ${response.status} from the server. Please check the URL and try again.</p><hr>`;
+        resultDiv.innerHTML += `<h3>网络错误</h3><p> 网络错误码 ${response.status} 来自服务器。请检查 URL 并重试。</p><hr>`;
+        }
+        ElMessage.error(`网络错误：${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
-      throw new Error(`HTTP ${response.status}`);
-    }
 
     const data = (await response.json()) as CrawlResponse;
     console.log("API响应: ", data);
 
     if (data.error) {
-      if (errorMessage) {
-        errorMessage.textContent = `错误: ${data.error}`;
-        errorMessage.classList.remove("d-none");
-      }
+      ElMessage.error(`错误: ${data.error}`);
       return;
     }
 
     if (!data.chapters || !Array.isArray(data.chapters)) {
-      if (errorMessage) {
-        errorMessage.textContent = "错误: 未接收到有效章节数据";
-        errorMessage.classList.remove("d-none");
-      }
+      ElMessage.error("错误: 未接收到有效章节数据");
       return;
     }
 
@@ -264,10 +258,7 @@ async function crawl() {
   } catch (error) {
     const err = error as Error;
     console.error("爬取出错", err);
-    if (errorMessage) {
-      errorMessage.textContent = `爬取失败: ${err.message}`;
-      errorMessage.classList.remove("d-none");
-    }
+    ElMessage.error(`爬取失败: ${err.message}`);
   }
 }
 

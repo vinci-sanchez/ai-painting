@@ -30,8 +30,30 @@ CREATE TABLE IF NOT EXISTS user_comics (
 	page_number INT NOT NULL DEFAULT 1,
 	image_base64 TEXT NOT NULL,
 	metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+	is_shared BOOLEAN NOT NULL DEFAULT FALSE,
+	share_message TEXT NOT NULL DEFAULT '',
+	likes_count INT NOT NULL DEFAULT 0,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE user_comics
+	ADD COLUMN IF NOT EXISTS is_shared BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE user_comics
+	ADD COLUMN IF NOT EXISTS share_message TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE user_comics
+	ADD COLUMN IF NOT EXISTS likes_count INT NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS comic_comments (
+	id BIGSERIAL PRIMARY KEY,
+	comic_id BIGINT NOT NULL REFERENCES user_comics(id) ON DELETE CASCADE,
+	author TEXT NOT NULL DEFAULT '游客',
+	content TEXT NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_comic_comments_comic_id ON comic_comments(comic_id);
 
 CREATE INDEX IF NOT EXISTS idx_user_comics_user_id ON user_comics(user_id);
 `
@@ -56,13 +78,26 @@ type User struct {
 
 // ComicRecord 描述用户已生成并保存的漫画页
 type ComicRecord struct {
-	ID          int64           `json:"id"`
-	UserID      int64           `json:"user_id"`
-	Title       string          `json:"title"`
-	PageNumber  int             `json:"page_number"`
-	ImageBase64 string          `json:"image_base64"`
-	Metadata    json.RawMessage `json:"metadata,omitempty"`
-	CreatedAt   time.Time       `json:"created_at"`
+	ID            int64           `json:"id"`
+	UserID        int64           `json:"user_id"`
+	Title         string          `json:"title"`
+	PageNumber    int             `json:"page_number"`
+	ImageBase64   string          `json:"image_base64"`
+	Metadata      json.RawMessage `json:"metadata,omitempty"`
+	IsShared      bool            `json:"is_shared"`
+	ShareMessage  string          `json:"share_message"`
+	LikesCount    int             `json:"likes_count"`
+	CommentsCount int             `json:"comments_count"`
+	CreatedAt     time.Time       `json:"created_at"`
+}
+
+// ComicComment 表示某条漫画留言
+type ComicComment struct {
+	ID        int64     `json:"id"`
+	ComicID   int64     `json:"comic_id"`
+	Author    string    `json:"author"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // UserStore 负责将用户账号信息持久化到 PostgreSQL
@@ -258,6 +293,7 @@ func (s *UserStore) SaveComicForUser(ctx context.Context, username string, comic
 	if len(comic.Metadata) == 0 {
 		comic.Metadata = json.RawMessage(`{}`)
 	}
+	comic.ShareMessage = strings.TrimSpace(comic.ShareMessage)
 
 	userID, err := s.lookupUserID(ctx, username)
 	if err != nil {
@@ -265,15 +301,17 @@ func (s *UserStore) SaveComicForUser(ctx context.Context, username string, comic
 	}
 
 	err = s.db.QueryRowContext(ctx, `
-		INSERT INTO user_comics (user_id, title, page_number, image_base64, metadata)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO user_comics (user_id, title, page_number, image_base64, metadata, is_shared, share_message, likes_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
 		RETURNING id, created_at
-	`, userID, comic.Title, comic.PageNumber, comic.ImageBase64, comic.Metadata).Scan(&comic.ID, &comic.CreatedAt)
+	`, userID, comic.Title, comic.PageNumber, comic.ImageBase64, comic.Metadata, comic.IsShared, comic.ShareMessage).Scan(&comic.ID, &comic.CreatedAt)
 	if err != nil {
 		return ComicRecord{}, fmt.Errorf("保存漫画失败: %w", err)
 	}
 
 	comic.UserID = userID
+	comic.LikesCount = 0
+	comic.CommentsCount = 0
 	return comic, nil
 }
 
@@ -285,10 +323,24 @@ func (s *UserStore) ListComicsForUser(ctx context.Context, username string) ([]C
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, title, page_number, image_base64, metadata, created_at
-		FROM user_comics
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		SELECT uc.id,
+		       uc.title,
+		       uc.page_number,
+		       uc.image_base64,
+		       uc.metadata,
+		       uc.is_shared,
+		       uc.share_message,
+		       uc.likes_count,
+		       COALESCE(cc.count, 0) AS comments_count,
+		       uc.created_at
+		FROM user_comics uc
+		LEFT JOIN (
+			SELECT comic_id, COUNT(*) AS count
+			FROM comic_comments
+			GROUP BY comic_id
+		) cc ON cc.comic_id = uc.id
+		WHERE uc.user_id = $1
+		ORDER BY uc.created_at DESC
 	`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("查询漫画失败: %w", err)
@@ -299,7 +351,7 @@ func (s *UserStore) ListComicsForUser(ctx context.Context, username string) ([]C
 	for rows.Next() {
 		var record ComicRecord
 		record.UserID = userID
-		if err := rows.Scan(&record.ID, &record.Title, &record.PageNumber, &record.ImageBase64, &record.Metadata, &record.CreatedAt); err != nil {
+		if err := rows.Scan(&record.ID, &record.Title, &record.PageNumber, &record.ImageBase64, &record.Metadata, &record.IsShared, &record.ShareMessage, &record.LikesCount, &record.CommentsCount, &record.CreatedAt); err != nil {
 			return nil, fmt.Errorf("读取漫画记录失败: %w", err)
 		}
 		records = append(records, record)
@@ -332,6 +384,212 @@ func (s *UserStore) DeleteComicForUser(ctx context.Context, username string, com
 	}
 	if rows == 0 {
 		return ErrComicNotFound
+	}
+	return nil
+}
+
+// UpdateComicShareForUser toggles share status and remarks for a given comic.
+func (s *UserStore) UpdateComicShareForUser(ctx context.Context, username string, comicID int64, isShared bool, shareMessage string) (ComicRecord, error) {
+	if comicID <= 0 {
+		return ComicRecord{}, errors.New("invalid comic id")
+	}
+	shareMessage = strings.TrimSpace(shareMessage)
+
+	userID, err := s.lookupUserID(ctx, username)
+	if err != nil {
+		return ComicRecord{}, err
+	}
+
+	var record ComicRecord
+	err = s.db.QueryRowContext(ctx, `
+		UPDATE user_comics
+		SET is_shared = $1,
+			share_message = $2
+		WHERE id = $3 AND user_id = $4
+		RETURNING id,
+		          title,
+		          page_number,
+		          image_base64,
+		          metadata,
+		          is_shared,
+		          share_message,
+		          likes_count,
+		          (SELECT COUNT(*) FROM comic_comments WHERE comic_id = $3) AS comments_count,
+		          created_at
+	`, isShared, shareMessage, comicID, userID).Scan(
+		&record.ID,
+		&record.Title,
+		&record.PageNumber,
+		&record.ImageBase64,
+		&record.Metadata,
+		&record.IsShared,
+		&record.ShareMessage,
+		&record.LikesCount,
+		&record.CommentsCount,
+		&record.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ComicRecord{}, ErrComicNotFound
+		}
+		return ComicRecord{}, fmt.Errorf("更新漫画分享信息失败: %w", err)
+	}
+	record.UserID = userID
+	return record, nil
+}
+
+// IncrementComicLikes 让指定漫画点赞数 +1
+func (s *UserStore) IncrementComicLikes(ctx context.Context, comicID int64) (int, error) {
+	if comicID <= 0 {
+		return 0, errors.New("invalid comic id")
+	}
+
+	var likes int
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE user_comics
+		SET likes_count = likes_count + 1
+		WHERE id = $1
+		RETURNING likes_count
+	`, comicID).Scan(&likes)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrComicNotFound
+		}
+		return 0, fmt.Errorf("增加喜欢次数失败: %w", err)
+	}
+	return likes, nil
+}
+
+// AddComicComment 为指定漫画新增留言
+func (s *UserStore) AddComicComment(ctx context.Context, comicID int64, author, content string) (ComicComment, error) {
+	if comicID <= 0 {
+		return ComicComment{}, errors.New("invalid comic id")
+	}
+	if err := s.ensureComicExists(ctx, comicID); err != nil {
+		return ComicComment{}, err
+	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return ComicComment{}, errors.New("留言内容不能为空")
+	}
+	author = strings.TrimSpace(author)
+	if author == "" {
+		author = "游客"
+	}
+
+	var comment ComicComment
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO comic_comments (comic_id, author, content)
+		VALUES ($1, $2, $3)
+		RETURNING id, comic_id, author, content, created_at
+	`, comicID, author, content).Scan(
+		&comment.ID,
+		&comment.ComicID,
+		&comment.Author,
+		&comment.Content,
+		&comment.CreatedAt,
+	)
+	if err != nil {
+		return ComicComment{}, fmt.Errorf("新增留言失败: %w", err)
+	}
+	return comment, nil
+}
+
+// ListComicComments 返回某条漫画的全部留言
+func (s *UserStore) ListComicComments(ctx context.Context, comicID int64) ([]ComicComment, error) {
+	if comicID <= 0 {
+		return nil, errors.New("invalid comic id")
+	}
+	if err := s.ensureComicExists(ctx, comicID); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, comic_id, author, content, created_at
+		FROM comic_comments
+		WHERE comic_id = $1
+		ORDER BY created_at DESC
+	`, comicID)
+	if err != nil {
+		return nil, fmt.Errorf("查询留言失败: %w", err)
+	}
+	defer rows.Close()
+
+	var comments []ComicComment
+	for rows.Next() {
+		var comment ComicComment
+		if err := rows.Scan(&comment.ID, &comment.ComicID, &comment.Author, &comment.Content, &comment.CreatedAt); err != nil {
+			return nil, fmt.Errorf("读取留言失败: %w", err)
+		}
+		comments = append(comments, comment)
+	}
+	return comments, nil
+}
+
+// ListFeaturedComics 返回分享的漫画中按喜欢与留言排序的 Top N
+func (s *UserStore) ListFeaturedComics(ctx context.Context, limit int) ([]ComicRecord, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT uc.id,
+		       uc.user_id,
+		       uc.title,
+		       uc.page_number,
+		       uc.image_base64,
+		       uc.metadata,
+		       uc.is_shared,
+		       uc.share_message,
+		       uc.likes_count,
+		       COALESCE(cc.count, 0) AS comments_count,
+		       uc.created_at
+		FROM user_comics uc
+		LEFT JOIN (
+			SELECT comic_id, COUNT(*) AS count
+			FROM comic_comments
+			GROUP BY comic_id
+		) cc ON cc.comic_id = uc.id
+		WHERE uc.is_shared = TRUE
+		ORDER BY uc.likes_count DESC, COALESCE(cc.count, 0) DESC, uc.created_at DESC
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("查询分享漫画失败: %w", err)
+	}
+	defer rows.Close()
+
+	var records []ComicRecord
+	for rows.Next() {
+		var record ComicRecord
+		if err := rows.Scan(
+			&record.ID,
+			&record.UserID,
+			&record.Title,
+			&record.PageNumber,
+			&record.ImageBase64,
+			&record.Metadata,
+			&record.IsShared,
+			&record.ShareMessage,
+			&record.LikesCount,
+			&record.CommentsCount,
+			&record.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("读取分享漫画失败: %w", err)
+		}
+		records = append(records, record)
+	}
+	return records, nil
+}
+
+func (s *UserStore) ensureComicExists(ctx context.Context, comicID int64) error {
+	var id int64
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id FROM user_comics WHERE id = $1
+	`, comicID).Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrComicNotFound
+		}
+		return err
 	}
 	return nil
 }

@@ -34,6 +34,10 @@
         <el-icon><Collection /></el-icon>
         <template #title>漫画</template>
       </el-menu-item>
+      <el-menu-item index="home-sample-gallery">
+        <el-icon><Collection /></el-icon>
+        <template #title>示例漫画</template>
+      </el-menu-item>
     </el-menu>
   </div>
 </template>

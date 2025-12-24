@@ -40,6 +40,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	h.registerCrawlerRoutes(r)
 	h.registerHelloRoutes(r)
 	h.registerUserRoutes(r)
+	h.registerComicRoutes(r)
 }
 
 // resolveAPIKey 优先使用请求体中的 apiKey，若为空则回退到服务端配置
