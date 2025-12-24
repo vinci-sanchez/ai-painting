@@ -135,9 +135,9 @@
           </div>
         </div>
         <el-divider />
-        <p class="share-hint">
+        <!-- <p class="share-hint">
           作品保存完成后会自动进入分享池，仅需填写标题即可；留言互动功能已移至“示例漫画”页面。
-        </p>
+        </p> -->
       </el-card>
     </el-main>
   </el-container>

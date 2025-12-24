@@ -20,6 +20,7 @@ func (h *Handler) registerComicRoutes(r *gin.Engine) {
 	group.POST("/:comicID/like", h.handleLikeComic)
 	group.GET("/:comicID/comments", h.handleListComicComments)
 	group.POST("/:comicID/comments", h.handleAddComicComment)
+	group.DELETE("/comments/:commentID", h.handleDeleteComicComment)
 	group.GET("/shared/featured", h.handleListFeaturedComics)
 }
 
@@ -91,6 +92,25 @@ func (h *Handler) handleListComicComments(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"comments": comments})
+}
+
+func (h *Handler) handleDeleteComicComment(c *gin.Context) {
+	commentIDStr := c.Param("commentID")
+	commentID, err := strconv.ParseInt(commentIDStr, 10, 64)
+	if err != nil || commentID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的留言ID"})
+		return
+	}
+
+	if err := h.userStore.DeleteComicComment(c.Request.Context(), commentID); err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, storage.ErrCommentNotFound) {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "留言已删除"})
 }
 
 func (h *Handler) handleListFeaturedComics(c *gin.Context) {

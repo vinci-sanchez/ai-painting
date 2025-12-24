@@ -65,6 +65,7 @@ var (
 	ErrEmptyPassword      = errors.New("password cannot be empty")
 	ErrUserNotFound       = errors.New("user does not exist")
 	ErrComicNotFound      = errors.New("comic not found")
+	ErrCommentNotFound    = errors.New("comment not found")
 )
 
 // User 表示一个存储的账号信息（密码使用散列值）
@@ -523,6 +524,28 @@ func (s *UserStore) ListComicComments(ctx context.Context, comicID int64) ([]Com
 		comments = append(comments, comment)
 	}
 	return comments, nil
+}
+
+// DeleteComicComment removes a comment regardless of owner.
+func (s *UserStore) DeleteComicComment(ctx context.Context, commentID int64) error {
+	if commentID <= 0 {
+		return errors.New("invalid comment id")
+	}
+	result, err := s.db.ExecContext(ctx, `
+		DELETE FROM comic_comments
+		WHERE id = $1
+	`, commentID)
+	if err != nil {
+		return fmt.Errorf("删除留言失败: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrCommentNotFound
+	}
+	return nil
 }
 
 // ListFeaturedComics 返回分享的漫画中按喜欢与留言排序的 Top N
