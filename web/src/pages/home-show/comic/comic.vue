@@ -18,7 +18,7 @@
           >
             <div class="comic-menu-item">
               <span class="comic-menu-item__title">
-                第{{ formatPageOrder(comicPage) }}页: {{ comicPage.title }}
+                {{ comicPage.title }} ({{ formatPageOrder(comicPage) }})
               </span>
               <el-button
                 v-if="canDeleteComic(comicPage)"
@@ -47,6 +47,9 @@
       <el-card>
         <div class="comic-card-header">
           <span class="page-title">{{ showPage.title }}</span>
+          <el-tag v-if="showPage.id > 0" type="info" effect="plain">
+            ID: {{ showPage.id }}
+          </el-tag>
           <div class="comic-right">
             <span>觉得不错？</span>
             <el-button type="primary" plain @click="handleShareClick">

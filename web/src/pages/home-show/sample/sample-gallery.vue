@@ -30,7 +30,8 @@
               :src="resolveCover(comic)"
               fit="cover"
               lazy
-              style="width: 100%; height: 180px"
+              style="width: 100%; height: 180px; cursor: zoom-in"
+              @click="openPreview(comic)"
             />
             <el-tag
               class="sample-card__badge"
@@ -42,19 +43,21 @@
           </div>
           <div class="sample-card__body">
             <h3>{{ comic.title }}</h3>
-            <p class="sample-card__subtitle">
-              {{ comic.shareMessage || "创作者暂未填写副标题，仅凭标题即可分享" }}
-            </p>
+            <p class="sample-card__id">ID: {{ comic.id }}</p>
             <div class="sample-card__meta">
-              <span><i class="fas fa-heart"></i> {{ comic.likesCount }} 喜欢</span>
+              <el-button
+                type="danger"
+                link
+                :loading="likeLoadingId === comic.id"
+                @click="handleLikeComic(comic)"
+              >
+                <i class="fas fa-heart"></i> {{ comic.likesCount }} 喜欢
+              </el-button>
               <span><i class="fas fa-comment-dots"></i> {{ comic.commentsCount }} 留言</span>
             </div>
             <div class="sample-card__actions">
               <el-button text size="small" @click="openCommentDialog(comic)">
                 留言互动
-              </el-button>
-              <el-button text size="small" @click="goToComic">
-                前往调整
               </el-button>
             </div>
           </div>
@@ -88,7 +91,8 @@
                 :src="resolveCover(comic)"
                 fit="cover"
                 lazy
-                style="width: 100%; height: 180px"
+                style="width: 100%; height: 180px; cursor: zoom-in"
+                @click="openPreview(comic)"
               />
               <el-tag class="sample-card__badge" type="primary" effect="dark">
                 我的作品
@@ -96,19 +100,21 @@
             </div>
             <div class="sample-card__body">
               <h3>{{ comic.title }}</h3>
-              <p class="sample-card__subtitle">
-                {{ comic.shareMessage || "仅填写标题即可完成分享" }}
-              </p>
+              <p class="sample-card__id">ID: {{ comic.id }}</p>
               <div class="sample-card__meta">
-                <span><i class="fas fa-heart"></i> {{ comic.likesCount }} 喜欢</span>
+                <el-button
+                  type="danger"
+                  link
+                  :loading="likeLoadingId === comic.id"
+                  @click="handleLikeComic(comic)"
+                >
+                  <i class="fas fa-heart"></i> {{ comic.likesCount }} 喜欢
+                </el-button>
                 <span><i class="fas fa-comment-dots"></i> {{ comic.commentsCount }} 留言</span>
               </div>
               <div class="sample-card__actions">
                 <el-button text size="small" @click="openCommentDialog(comic)">
                   查看留言
-                </el-button>
-                <el-button text size="small" @click="goToComic">
-                  前往调整
                 </el-button>
               </div>
             </div>
@@ -118,13 +124,22 @@
     </section>
 
     <el-dialog
+      v-model="imagePreviewVisible"
+      class="preview-dialog"
+      width="80vw"
+      align-center
+    >
+      <img :src="imagePreviewSrc" alt="preview" class="preview-image" />
+    </el-dialog>
+
+    <el-dialog
       v-model="commentDialogVisible"
       :title="commentTarget?.title || '留言互动'"
       width="520px"
     >
       <div v-if="commentTarget" class="comment-dialog">
         <p class="comment-dialog__hint">
-          给《{{ commentTarget.title }}》留句话吧，作者只需填写标题即可分享。
+          给《{{ commentTarget.title }}》留句话吧
         </p>
         <el-input
           v-model="commentForm.author"
@@ -177,6 +192,7 @@ import {
   fetchFeaturedComics,
   fetchComicComments,
   addComicComment,
+  likeComic,
   userComics,
   refreshUserComics,
   type StoredComic,
@@ -197,6 +213,9 @@ const commentForm = ref({
   author: "",
   content: "",
 });
+const likeLoadingId = ref<number | null>(null);
+const imagePreviewVisible = ref(false);
+const imagePreviewSrc = ref("");
 
 const mySharedComics = computed(() =>
   userComics.value.filter((item) => item.isShared)
@@ -297,6 +316,34 @@ const submitComment = async () => {
   }
 };
 
+const openPreview = (comic: StoredComic) => {
+  imagePreviewSrc.value = resolveCover(comic);
+  imagePreviewVisible.value = true;
+};
+
+const handleLikeComic = async (comic: StoredComic) => {
+  if (!comic?.id || likeLoadingId.value === comic.id) {
+    return;
+  }
+  likeLoadingId.value = comic.id;
+  try {
+    const likes = await likeComic(comic.id);
+    comics.value = comics.value.map((item) =>
+      item.id === comic.id ? { ...item, likesCount: likes } : item
+    );
+    if (currentUser.value?.username) {
+      refreshUserComics(currentUser.value.username);
+    }
+    ElMessage.success("已点赞");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "点赞失败，请稍后再试";
+    ElMessage.error(message);
+  } finally {
+    likeLoadingId.value = null;
+  }
+};
+
 watch(
   () => currentUser.value?.username,
   (name) => {
@@ -363,17 +410,23 @@ onMounted(loadComics);
   margin-top: 12px;
 }
 
-.sample-card__subtitle {
+.sample-card__id {
   margin: 0;
+  font-size: 12px;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
 }
 
 .sample-card__meta {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   color: var(--el-text-color-secondary);
   font-size: 13px;
+  gap: 8px;
+}
+
+.sample-card__meta .el-button {
+  padding: 0;
 }
 
 .sample-card__actions {
@@ -420,6 +473,16 @@ onMounted(loadComics);
   margin: 4px 0 0;
   white-space: pre-wrap;
   line-height: 1.4;
+}
+
+.preview-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.preview-image {
+  width: 100%;
+  display: block;
+  object-fit: contain;
 }
 
 @media (max-width: 768px) {

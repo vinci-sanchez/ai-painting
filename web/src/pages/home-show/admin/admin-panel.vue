@@ -53,6 +53,29 @@
     <el-card class="admin-card">
       <template #header>
         <div class="card-header">
+          <h3>喜欢数管理</h3>
+          <span>输入漫画 ID，可立即为该作品 +1 喜欢</span>
+        </div>
+      </template>
+      <el-form label-position="top">
+        <el-form-item label="漫画 ID">
+          <el-input v-model="likeComicId" placeholder="整数 ID" />
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
+            :loading="likeLoading"
+            @click="handleAdminLike"
+          >
+            +1 喜欢
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="admin-card">
+      <template #header>
+        <div class="card-header">
           <h3>删除指定漫画</h3>
           <span>输入用户名 + 漫画 ID 即可删除</span>
         </div>
@@ -153,6 +176,8 @@ const deleteForm = reactive({
   comicId: "",
 });
 const deleteLoading = ref(false);
+const likeComicId = ref("");
+const likeLoading = ref(false);
 
 const commentComicId = ref("");
 const commentList = ref<
@@ -348,6 +373,34 @@ const deleteComment = async (commentId: number) => {
     ElMessage.error(message);
   } finally {
     commentDeleting.value = null;
+  }
+};
+
+const handleAdminLike = async () => {
+  const comicId = Number(likeComicId.value);
+  if (!comicId) {
+    ElMessage.warning("请输入有效的漫画ID");
+    return;
+  }
+  likeLoading.value = true;
+  try {
+    const response = await fetch(
+      `${BACK_URL}/api/comics/${comicId}/like`,
+      { method: "POST" }
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error || "点赞失败");
+    }
+    ElMessage.success(
+      `点赞成功，当前喜欢数：${typeof data.likes === "number" ? data.likes : "未知"}`
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "点赞失败，请稍后再试";
+    ElMessage.error(message);
+  } finally {
+    likeLoading.value = false;
   }
 };
 
