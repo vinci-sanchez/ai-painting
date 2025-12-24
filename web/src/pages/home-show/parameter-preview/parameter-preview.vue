@@ -74,23 +74,13 @@
       <el-button
         type="primary"
         @click="ConfigurationClick"
-        style="
-          width: 100px;
-          display: block;
-          height: 35px;
-          width: fit-content;
-        "
+        style="width: 100px; display: block; height: 35px; width: fit-content"
         >其他配置</el-button
       >
       <el-button
         type="primary"
         @click="UploadImg"
-        style="
-          width: 100px;
-          display: block;
-          height: 35px;
-          width: fit-content;
-        "
+        style="width: 100px; display: block; height: 35px; width: fit-content"
         >上传图像</el-button
       >
     </div>
@@ -114,57 +104,59 @@
         </el-form-item>
       </el-form>
     </el-dialog>
-      <el-dialog
-        v-model="uploadDialogVisible"
-        title="上传图像"
-        :width="dialogWidth"
-      >
-        <div class="upload-dialog-content">
-   
-          <div class="upload-section">
-        
-            <el-upload
-              class="upload-block"
-              drag
-              :auto-upload="false"
-              action=""
-              accept="image/*"
-              :file-list="uploadFiles"
-              :on-change="handleUploadChange"
-              :on-remove="handleUploadRemove"
-            >
-              <el-icon class="upload-icon"><UploadFilled /></el-icon>
-              <div class="el-upload__text">
-                将文件拖到此处，或 <em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">仅用于参考展示，当前不会上传到服务器</div>
-              </template>
-            </el-upload>
-            <div v-if="uploadPreview" class="upload-preview">
-              <img :src="uploadPreview" alt="预览图" />
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="上传图像"
+      :width="dialogWidth"
+    >
+      <div class="upload-dialog-content">
+        <div class="upload-section">
+          <el-upload
+            class="upload-block"
+            drag
+            :auto-upload="false"
+            action=""
+            accept="image/*"
+            :file-list="uploadFiles"
+            :on-change="handleUploadChange"
+            :on-remove="handleUploadRemove"
+          >
+            <el-icon class="upload-icon"><UploadFilled /></el-icon>
+            <div class="el-upload__text">
+              将文件拖到此处，或 <em>点击上传</em>
             </div>
-          </div>
-          <div class="upload-section">
-            <h6>图像介绍</h6>
-            <el-input
-              v-model="uploadDescription"
-              type="textarea"
-              :autosize="{ minRows: 4, maxRows: 6 }"
-              placeholder="请输入对参考图像的简要说明，图为人物长相或其他信息"
-            />
+            <template #tip>
+              <div class="el-upload__tip">
+                仅用于参考展示，当前不会上传到服务器
+              </div>
+            </template>
+          </el-upload>
+          <div v-if="uploadPreview" class="upload-preview">
+            <img :src="uploadPreview" alt="预览图" />
           </div>
         </div>
-        <template #footer>
-          <div class="dialog-footer">
-            <el-button @click="uploadDialogVisible = false">取 消</el-button>
-            <el-button type="primary" @click="handleUploadConfirm">完 成</el-button>
-          </div>
-        </template>
-      </el-dialog>
+        <div class="upload-section">
+          <h6>图像介绍</h6>
+          <el-input
+            v-model="uploadDescription"
+            type="textarea"
+            :autosize="{ minRows: 4, maxRows: 6 }"
+            placeholder="请输入对参考图像的简要说明，图为人物长相或其他信息"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="uploadDialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="handleUploadConfirm"
+            >完 成</el-button
+          >
+        </div>
+      </template>
+    </el-dialog>
     <div
       v-loading="loading"
-      element-loading-text="巴拉巴拉生成中..."
+      element-loading-text="巴拉巴拉生成中...（漫画中文大可能会乱码，请见谅）"
       :element-loading-spinner="svg"
       element-loading-svg-view-box="-10, -10, 50, 50"
       element-loading-background="rgba(122, 122, 122, 0.8)"
@@ -195,8 +187,7 @@
       </el-descriptions>
 
       <p>分镜内容</p>
- 
-       
+
       <h6>场景</h6>
       <el-input
         v-model="scene"
@@ -672,11 +663,11 @@ async function generateImage(ComicData: ComicData) {
     apiKey: (UPDATE_API_KEY.value || "").trim(),
     baseUrl: targetBaseUrl,
     model: UPDATE_IMAGE_MODEL.value,
-    prompt: `以${style.value}风格，
-    ${color.value}色调，
-    ${customTags.value.join(",")}，
-    创作一个包含场景:${scene.value}，
-    剧情为${prompt.value}，人物:${character.value},人物对白:${
+    prompt: `以${style.value}风格，${color.value}色调，${customTags.value.join(
+      ","
+    )}，创作一个包含场景:${scene.value}，剧情为${prompt.value}，人物:${
+      character.value
+    },人物对白:${
       dialogue.value
     }的一个极具创意的漫画页面排版，自由构图，非网格化布局，人物和背景元素跨越多个分镜格，复杂的页面设计；若有颜色形容词则必须按照${
       style.value
@@ -805,10 +796,10 @@ defineProps<{ text?: string }>();
     align-items: flex-start;
   }
 
-.parameter-preview :deep(.el-input__inner),
-.parameter-preview :deep(.el-textarea__inner) {
-  font-size: 14px;
-}
+  .parameter-preview :deep(.el-input__inner),
+  .parameter-preview :deep(.el-textarea__inner) {
+    font-size: 14px;
+  }
 }
 
 .upload-dialog-content {
