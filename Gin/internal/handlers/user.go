@@ -36,6 +36,10 @@ type comicShareRequest struct {
 	ShareMessage string `json:"share_message"`
 }
 
+type comicTitleRequest struct {
+	Title string `json:"title" binding:"required"`
+}
+
 func (h *Handler) registerUserRoutes(r *gin.Engine) {
 	group := r.Group("/api/users")
 	group.POST("", h.handleRegisterUser)
@@ -43,6 +47,7 @@ func (h *Handler) registerUserRoutes(r *gin.Engine) {
 	group.GET("/:username/comics", h.handleListUserComics)
 	group.POST("/:username/comics", h.handleCreateUserComic)
 	group.DELETE("/:username/comics/:comicID", h.handleDeleteUserComic)
+	group.PATCH("/:username/comics/:comicID/title", h.handleUpdateComicTitle)
 	group.PATCH("/:username/comics/:comicID/share", h.handleUpdateComicShare)
 	group.GET("/:username", h.handleGetUser)
 }
@@ -254,6 +259,44 @@ func (h *Handler) handleUpdateComicShare(c *gin.Context) {
 		comicID,
 		req.IsShared,
 		strings.TrimSpace(req.ShareMessage),
+	)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, storage.ErrEmptyUsername) || errors.Is(err, storage.ErrUserNotFound) || errors.Is(err, storage.ErrComicNotFound) {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"comic": record})
+}
+
+func (h *Handler) handleUpdateComicTitle(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "用户名不能为空"})
+		return
+	}
+
+	comicIDStr := c.Param("comicID")
+	comicID, err := strconv.ParseInt(comicIDStr, 10, 64)
+	if err != nil || comicID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的漫画ID"})
+		return
+	}
+
+	var req comicTitleRequest
+	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Title) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请输入有效的标题"})
+		return
+	}
+
+	record, err := h.userStore.UpdateComicTitleForUser(
+		c.Request.Context(),
+		username,
+		comicID,
+		req.Title,
 	)
 	if err != nil {
 		status := http.StatusInternalServerError

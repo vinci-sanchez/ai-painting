@@ -46,10 +46,20 @@
     <el-main class="comic-content">
       <el-card>
         <div class="comic-card-header">
-          <span class="page-title">{{ showPage.title }}</span>
-          <el-tag v-if="showPage.id > 0" type="info" effect="plain">
-            ID: {{ showPage.id }}
-          </el-tag>
+          <div class="title-group">
+            <span class="page-title">{{ showPage.title }}</span>
+            <el-tag v-if="showPage.id > 0" type="info" effect="plain">
+              ID: {{ showPage.id }}
+            </el-tag>
+            <el-button
+              v-if="canDeleteComic(showPage)"
+              text
+              size="small"
+              @click="openRenameDialog"
+            >
+              修改标题
+            </el-button>
+          </div>
           <div class="comic-right">
             <span>觉得不错？</span>
             <el-button type="primary" plain @click="handleShareClick">
@@ -97,6 +107,24 @@
                 Confirm
               </el-button> -->
             </div>
+          </template>
+        </el-dialog>
+        <el-dialog v-model="renameDialogVisible" title="修改标题" width="420px">
+          <el-input
+            v-model="renameInput"
+            placeholder="请输入新的标题"
+            maxlength="60"
+            show-word-limit
+          />
+          <template #footer>
+            <el-button @click="renameDialogVisible = false">取消</el-button>
+            <el-button
+              type="primary"
+              :loading="renameLoading"
+              @click="handleRenameSubmit"
+            >
+              保存
+            </el-button>
           </template>
         </el-dialog>
         <!-- 漫画面板 -->
@@ -160,6 +188,7 @@ import {
   refreshUserComics,
   userComics,
   deleteComicForCurrentUser,
+  updateComicTitleForCurrentUser,
 } from "../user-comics";
 import type { StoredComic } from "../user-comics";
 
@@ -220,6 +249,9 @@ const isSmallScreen = ref(false);
 const shareDialogWidth = computed(() =>
   isSmallScreen.value ? "92vw" : "500px"
 );
+const renameDialogVisible = ref(false);
+const renameInput = ref("");
+const renameLoading = ref(false);
 
 const updateScreenMode = () => {
   if (typeof window === "undefined") {
@@ -307,6 +339,15 @@ const normalizeStoredComic = (record: StoredComic): ComicPage => {
     likesCount: record.likesCount,
     commentsCount: record.commentsCount,
   };
+};
+
+const applyPageUpdate = (pageId: number, data: Partial<ComicPage>) => {
+  if (showPage.value.id === pageId) {
+    showPage.value = { ...showPage.value, ...data };
+  }
+  comicPages.value = comicPages.value.map((page) =>
+    page.id === pageId ? { ...page, ...data } : page
+  );
 };
 
 const extractParameters = (
@@ -477,6 +518,44 @@ const handlePageSelect = (index: string) => {
   );
   if (selected) {
     showPage.value = selected;
+  }
+};
+
+const openRenameDialog = () => {
+  if (!canDeleteComic(showPage.value)) {
+    ElMessage.info("保存后才能修改标题");
+    return;
+  }
+  renameInput.value = showPage.value.title || "";
+  renameDialogVisible.value = true;
+};
+
+const handleRenameSubmit = async () => {
+  const newTitle = renameInput.value.trim();
+  const comicId = showPage.value.id;
+  if (!comicId || comicId <= 0) {
+    ElMessage.info("保存后才能修改标题");
+    return;
+  }
+  if (!newTitle) {
+    ElMessage.warning("标题不能为空");
+    return;
+  }
+  try {
+    renameLoading.value = true;
+    const updated = await updateComicTitleForCurrentUser({
+      comicId,
+      title: newTitle,
+    });
+    applyPageUpdate(comicId, { title: updated.title });
+    ElMessage.success("标题已更新");
+    renameDialogVisible.value = false;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "标题更新失败，请稍后再试";
+    ElMessage.error(message);
+  } finally {
+    renameLoading.value = false;
   }
 };
 ///////修改参数
@@ -684,6 +763,13 @@ const handleDeleteComic = async (page: ComicPage) => {
 .page-title {
   margin: 0 0 12px;
   font-weight: 600;
+}
+
+.title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .page-preview {

@@ -11,8 +11,14 @@
       <el-button type="primary" @click="goToComic">前往漫画页</el-button>
     </section>
 
+    <el-skeleton
+      v-if="!initialLoaded && loading"
+      :rows="4"
+      animated
+      class="sample-comics__skeleton"
+    />
     <el-empty
-      v-if="!loading && !comics.length"
+      v-else-if="initialLoaded && !comics.length"
       description="暂时没有分享的漫画"
       class="sample-gallery__empty"
     />
@@ -64,6 +70,15 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <div
+      v-if="initialLoaded && comics.length"
+      ref="loadMoreRef"
+      class="load-more-sentinel"
+    >
+      <span v-if="loading && hasMore">加载中...</span>
+      <span v-else-if="!hasMore">已经到底啦</span>
+    </div>
 
     <el-divider />
     <section class="my-comics">
@@ -185,7 +200,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 import {
@@ -202,7 +217,12 @@ import { currentUser } from "../auth-user";
 
 const comics = ref<StoredComic[]>([]);
 const loading = ref(false);
+const initialLoaded = ref(false);
+const hasMore = ref(true);
+const pageSize = 12;
 const router = useRouter();
+const loadMoreRef = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | null = null;
 
 const commentDialogVisible = ref(false);
 const commentTarget = ref<StoredComic | null>(null);
@@ -221,18 +241,32 @@ const mySharedComics = computed(() =>
   userComics.value.filter((item) => item.isShared)
 );
 
-const loadComics = async () => {
+const loadMoreComics = async () => {
+  if (loading.value || !hasMore.value) {
+    return;
+  }
   loading.value = true;
   try {
-    comics.value = await fetchFeaturedComics(12);
+    const next = await fetchFeaturedComics(pageSize, comics.value.length);
+    if (next.length < pageSize) {
+      hasMore.value = false;
+    }
+    comics.value = [...comics.value, ...next];
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "无法加载分享漫画";
     ElMessage.error(message);
-    comics.value = [];
   } finally {
     loading.value = false;
+    initialLoaded.value = true;
   }
+};
+
+const refreshComics = async () => {
+  comics.value = [];
+  hasMore.value = true;
+  initialLoaded.value = false;
+  await loadMoreComics();
 };
 
 const goToComic = () => {
@@ -306,7 +340,7 @@ const submitComment = async () => {
     commentList.value = [created, ...commentList.value];
     commentForm.value.content = "";
     ElMessage.success("留言已提交");
-    await loadComics();
+    await refreshComics();
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "留言失败，请稍后再试";
@@ -357,7 +391,39 @@ watch(
   { immediate: true }
 );
 
-onMounted(loadComics);
+watch(
+  loadMoreRef,
+  (el, prev) => {
+    if (prev && observer) {
+      observer.unobserve(prev);
+    }
+    if (el && observer) {
+      observer.observe(el);
+    }
+  },
+  { flush: "post" }
+);
+
+onMounted(() => {
+  loadMoreComics();
+  observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        loadMoreComics();
+      }
+    });
+  });
+  if (loadMoreRef.value) {
+    observer.observe(loadMoreRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (observer && loadMoreRef.value) {
+    observer.unobserve(loadMoreRef.value);
+  }
+  observer = null;
+});
 </script>
 
 <style scoped>
@@ -384,6 +450,10 @@ onMounted(loadComics);
 }
 
 .sample-gallery__empty {
+  margin-top: 24px;
+}
+
+.sample-comics__skeleton {
   margin-top: 24px;
 }
 
@@ -473,6 +543,12 @@ onMounted(loadComics);
   margin: 4px 0 0;
   white-space: pre-wrap;
   line-height: 1.4;
+}
+
+.load-more-sentinel {
+  text-align: center;
+  padding: 12px 0;
+  color: var(--el-text-color-secondary);
 }
 
 .preview-dialog :deep(.el-dialog__body) {

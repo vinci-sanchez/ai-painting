@@ -439,6 +439,58 @@ func (s *UserStore) UpdateComicShareForUser(ctx context.Context, username string
 	return record, nil
 }
 
+// UpdateComicTitleForUser 更新标题
+func (s *UserStore) UpdateComicTitleForUser(ctx context.Context, username string, comicID int64, title string) (ComicRecord, error) {
+	if comicID <= 0 {
+		return ComicRecord{}, errors.New("invalid comic id")
+	}
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return ComicRecord{}, errors.New("title cannot be empty")
+	}
+
+	userID, err := s.lookupUserID(ctx, username)
+	if err != nil {
+		return ComicRecord{}, err
+	}
+
+	var record ComicRecord
+	err = s.db.QueryRowContext(ctx, `
+		UPDATE user_comics
+		SET title = $1
+		WHERE id = $2 AND user_id = $3
+		RETURNING id,
+		          title,
+		          page_number,
+		          image_base64,
+		          metadata,
+		          is_shared,
+		          share_message,
+		          likes_count,
+		          (SELECT COUNT(*) FROM comic_comments WHERE comic_id = $2) AS comments_count,
+		          created_at
+	`, title, comicID, userID).Scan(
+		&record.ID,
+		&record.Title,
+		&record.PageNumber,
+		&record.ImageBase64,
+		&record.Metadata,
+		&record.IsShared,
+		&record.ShareMessage,
+		&record.LikesCount,
+		&record.CommentsCount,
+		&record.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ComicRecord{}, ErrComicNotFound
+		}
+		return ComicRecord{}, fmt.Errorf("更新标题失败: %w", err)
+	}
+	record.UserID = userID
+	return record, nil
+}
+
 // IncrementComicLikes 让指定漫画点赞数 +1
 func (s *UserStore) IncrementComicLikes(ctx context.Context, comicID int64) (int, error) {
 	if comicID <= 0 {
@@ -549,9 +601,12 @@ func (s *UserStore) DeleteComicComment(ctx context.Context, commentID int64) err
 }
 
 // ListFeaturedComics 返回分享的漫画中按喜欢与留言排序的 Top N
-func (s *UserStore) ListFeaturedComics(ctx context.Context, limit int) ([]ComicRecord, error) {
+func (s *UserStore) ListFeaturedComics(ctx context.Context, limit, offset int) ([]ComicRecord, error) {
 	if limit <= 0 {
 		limit = 5
+	}
+	if offset < 0 {
+		offset = 0
 	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT uc.id,
@@ -573,8 +628,8 @@ func (s *UserStore) ListFeaturedComics(ctx context.Context, limit int) ([]ComicR
 		) cc ON cc.comic_id = uc.id
 		WHERE uc.is_shared = TRUE
 		ORDER BY uc.likes_count DESC, COALESCE(cc.count, 0) DESC, uc.created_at DESC
-		LIMIT $1
-	`, limit)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("查询分享漫画失败: %w", err)
 	}

@@ -119,7 +119,12 @@ func (h *Handler) handleListFeaturedComics(c *gin.Context) {
 	if err != nil || limit <= 0 {
 		limit = 5
 	}
-	records, err := h.userStore.ListFeaturedComics(c.Request.Context(), limit)
+	offsetStr := c.DefaultQuery("offset", "0")
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+	records, err := h.userStore.ListFeaturedComics(c.Request.Context(), limit, offset)
 	if err != nil {
 		status := http.StatusInternalServerError
 		c.JSON(status, gin.H{"error": err.Error()})

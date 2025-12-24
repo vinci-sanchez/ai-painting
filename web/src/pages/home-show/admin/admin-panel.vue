@@ -105,6 +105,35 @@
     <el-card class="admin-card">
       <template #header>
         <div class="card-header">
+          <h3>修改漫画标题</h3>
+          <span>输入用户名、漫画 ID 和新标题</span>
+        </div>
+      </template>
+      <el-form label-position="top">
+        <el-form-item label="用户名">
+          <el-input v-model="renameForm.username" placeholder="username" />
+        </el-form-item>
+        <el-form-item label="漫画 ID">
+          <el-input v-model="renameForm.comicId" placeholder="整数 ID" />
+        </el-form-item>
+        <el-form-item label="新标题">
+          <el-input v-model="renameForm.title" placeholder="新的标题" />
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
+            :loading="renameLoading"
+            @click="handleRenameComic"
+          >
+            保存标题
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="admin-card">
+      <template #header>
+        <div class="card-header">
           <h3>留言管理</h3>
           <span>查询指定漫画的留言，并可单独删除</span>
         </div>
@@ -176,6 +205,12 @@ const deleteForm = reactive({
   comicId: "",
 });
 const deleteLoading = ref(false);
+const renameForm = reactive({
+  username: "",
+  comicId: "",
+  title: "",
+});
+const renameLoading = ref(false);
 const likeComicId = ref("");
 const likeLoading = ref(false);
 
@@ -305,6 +340,38 @@ const handleDeleteComic = async () => {
     ElMessage.error(message);
   } finally {
     deleteLoading.value = false;
+  }
+};
+
+const handleRenameComic = async () => {
+  const username = renameForm.username.trim();
+  const comicId = Number(renameForm.comicId);
+  const title = renameForm.title.trim();
+  if (!username || !comicId || !title) {
+    ElMessage.warning("请完整填写用户名、漫画ID与标题");
+    return;
+  }
+  renameLoading.value = true;
+  try {
+    const response = await fetch(
+      `${BACK_URL}/api/users/${encodeURIComponent(username)}/comics/${comicId}/title`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      }
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error || "修改失败");
+    }
+    ElMessage.success("标题已更新");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "修改失败，请稍后再试";
+    ElMessage.error(message);
+  } finally {
+    renameLoading.value = false;
   }
 };
 

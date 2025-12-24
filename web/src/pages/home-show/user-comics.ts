@@ -219,6 +219,42 @@ export const updateComicShareForCurrentUser = async (
   return updated;
 };
 
+type TitleUpdatePayload = {
+  comicId: number;
+  title: string;
+};
+
+export const updateComicTitleForCurrentUser = async (
+  payload: TitleUpdatePayload
+) => {
+  const username = currentUser.value?.username?.trim();
+  if (!username) {
+    throw new Error("用户未登录");
+  }
+  if (!payload.title.trim()) {
+    throw new Error("标题不能为空");
+  }
+  const response = await fetch(
+    `${BACK_URL}/api/users/${encodeURIComponent(username)}/comics/${
+      payload.comicId
+    }/title`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: payload.title }),
+    }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.comic) {
+    throw new Error(data?.error || "更新标题失败");
+  }
+  const updated = normalizeComic(data.comic as RawComicResponse);
+  userComicsRef.value = userComicsRef.value.map((comic) =>
+    comic.id === updated.id ? updated : comic
+  );
+  return updated;
+};
+
 export const likeComic = async (comicId: number) => {
   if (!comicId) {
     throw new Error("无效的漫画ID");
@@ -292,10 +328,11 @@ export const addComicComment = async (
 };
 
 export const fetchFeaturedComics = async (
-  limit = 5
+  limit = 5,
+  offset = 0
 ): Promise<StoredComic[]> => {
   const response = await fetch(
-    `${BACK_URL}/api/comics/shared/featured?limit=${limit}`
+    `${BACK_URL}/api/comics/shared/featured?limit=${limit}&offset=${offset}`
   );
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
